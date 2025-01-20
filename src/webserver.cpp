@@ -15,6 +15,15 @@
 
 #define MAX_CLIENTS 10
 
+/**
+ * @brief Represents an HTTP request with its components such as URL, method, body, and headers.
+ *
+ * The `Request` class encapsulates the details of an HTTP request, including:
+ * - The URL being requested.
+ * - The HTTP method (e.g., GET, POST, PUT, DELETE).
+ * - The body of the request (used in methods like POST).
+ * - Headers in the form of key-value pairs.
+ */
 class Request {
 	private:
 		std::string url;
@@ -24,6 +33,23 @@ class Request {
 	public:
 };
 
+/**
+ * @brief Reads the contents of a file descriptor and returns it as a string.
+ *
+ * This function reads data from the provided file descriptor (fd) in chunks of
+ * 1024 bytes and appends the content to a string. The resulting string starts
+ * with the HTTP header "HTTP/1.1 200 OK\r\n" harcoded. 
+ *
+ * @param fd The file descriptor from which data will be read.
+ * @return A std::string containing the HTTP response header and the content
+ *         read from the file descriptor. If no data is read, the string will 
+ *         contain only the HTTP header.
+ *
+ * @note The function currently has a logical issue because it includes a 
+ *       `return result;` inside the `do-while` loop, which prevents the loop 
+ *       from iterating beyond the first read. This should be corrected if 
+ *       multiple reads are expected.
+ */
 std::string ft_readFile(int fd) {
     int n_byte = 0;
     std::string result = "HTTP/1.1 200 OK\r\n";
@@ -37,6 +63,31 @@ std::string ft_readFile(int fd) {
     return result;
 }
 
+/**
+ * @brief Executes a CGI script by forking a new process and setting up I/O redirection.
+ *
+ * This function forks a new process to execute a CGI (Common Gateway Interface) script.
+ * It redirects the input and output of the child process to the provided pipes 
+ * and executes the script using `execve`.
+ *
+ * @param io An array of two file descriptors for input and output pipes:
+ *           - `io[0]`: File descriptor for reading (stdin for the CGI script).
+ *           - `io[1]`: File descriptor for writing (stdout for the CGI script).
+ * @param args An array of arguments for the CGI script. The first element should
+ *             be the path to the script, followed by its arguments, and terminated
+ *             with a `NULL` pointer.
+ * @param env An array of environment variables to be passed to the CGI script,
+ *            terminated with a `NULL` pointer.
+ *
+ * @return The process ID (`pid_t`) of the forked child process, or 0 if the fork
+ *         fails.
+ *
+ * @note The function closes the pipes in the child process after duplicating them
+ *       to standard input and output. In the parent process, the pipes remain open,
+ *       and the caller is responsible for managing and closing them.
+ *
+ * @note If `execve` fails, the child process will exit with a status of 1.
+ */
 pid_t execute_cgi(int *io, char *args[], char **env ) {
 
     pid_t pid = fork();
@@ -44,9 +95,9 @@ pid_t execute_cgi(int *io, char *args[], char **env ) {
     if (pid < 0)
         return 0;
     else if (pid == 0) {
-        dup2(io[0], 0); // Redirigir la entrada estándar al pipe
+        dup2(io[0], 0);
         close(io[0]);
-        dup2(io[1], 1); // Redirigir la salida estándar al pipe
+        dup2(io[1], 1);
         close(io[1]);
         execve(args[0], args, env);
 		exit(1);
@@ -54,6 +105,28 @@ pid_t execute_cgi(int *io, char *args[], char **env ) {
 	return pid;
 }
 
+/**
+ * @brief Creates a child process to execute a CGI script and sends the result back to the client.
+ *
+ * This function forks a new process to handle the execution of a CGI script using `execute_cgi`. 
+ * It sets up communication with the CGI script using pipes and sends the script's output 
+ * back to the client through the provided epoll event.
+ *
+ * @param clients A pointer to an `epoll_event` structure representing the client connection.
+ *                The file descriptor (`clients->data.fd`) is used for sending data back to the client.
+ * @param env A `char**` array representing the environment variables to be passed to the CGI script.
+ * @param body A `std::string` containing the request body or additional data to be passed as an argument
+ *             to the CGI script.
+ *
+ * @note The function:
+ *       - Creates a pipe for communication between the parent and child processes.
+ *       - Uses `execute_cgi` to execute the CGI script in the child process.
+ *       - Reads the CGI script's output from the pipe.
+ *       - Sends the output to the client and closes the client's file descriptor.
+ *       - Properly waits for child processes to avoid zombie processes.
+ *
+ * @note The function closes the pipe file descriptors and the client socket after use to free resources.
+ */
 void ft_create_pid(struct epoll_event* clients, char** env, std::string body) {
 
     pid_t pid = fork();
