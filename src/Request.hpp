@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include "utils/split.hpp"
 
 const std::string CONTENT_LENGTH = "Content-Length";
 
@@ -20,22 +21,7 @@ std::string to_string(int value) {
     oss << value;
     return oss.str();
 }
-/**
- * @brief Divide una cadena en partes utilizando un delimitador.
- * 
- * @param str La cadena que se desea dividir.
- * @param delimiter El carácter delimitador.
- * @return std::deque<std::string> Partes de la cadena dividida.
- */
-std::deque<std::string> split(const std::string &str, char delimiter) {
-	std::stringstream		sstr(str);
-	std::string				token;
-	std::deque<std::string>	result;
-	while (std::getline(sstr, token, delimiter)){
-		result.push_back(token);
-	}
-	return result;
-}
+
 
 /**
  * @class Request
