@@ -2,6 +2,7 @@
 #define CGI_HPP
 #include <string>
 #include <sys/wait.h>
+#include "utils/readFd.hpp"
 
 /**
  * @brief Verifica si una cadena termina con un sufijo específico.
@@ -113,15 +114,9 @@ public:
             //TODO: Intentar devolver multiples codigos de error
             std::string result = "HTTP/1.1 200 OK\r\n";
             if (status)
-                result = "HTTP/1.1 500 Server Internal Error";
-            char buffer[1024];
-            ssize_t bytes_read;
-
-            while ((bytes_read = read(io[0], buffer, sizeof(buffer))) > 0) {
-                result.append(buffer, bytes_read);
-            }
-            close(io[0]);
-            return result;
+                return (close(io[0]), "HTTP/1.1 500 Server Internal Error\r\n");
+            result.append(readFd(io[0]));
+            return (close(io[0]), result);
         }
     }
 };
