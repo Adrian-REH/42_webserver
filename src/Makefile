@@ -13,7 +13,7 @@
 NAME = WEBS
 CC = c++
 CFLAGS = -std=c++98
-SRCS = webserver.cpp 
+SRCS = main.cpp
 COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = 
 
