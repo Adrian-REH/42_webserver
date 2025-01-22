@@ -160,67 +160,58 @@ class Location {
             _files = (get_all_dirs(_root_directory.c_str() + 1)); // Adjust for directories without leading '/'
             return *this;
         }
+        // Helper function to build the full path.
+        std::string buildFullPath(const std::string &root, const std::string &filename) {
+            std::string result;
+            if (!starts_with(root, "/"))
+                result = "/";
+            result.append(root);
+            if (!ends_with(result, "/"))
+                result.append("/");
+            result.append(filename);
+            return result;
+        }
+
         /**
-         * @brief Finds the full script path based on the given request path.
+         * @brief Resolves the full script path based on the given request path.
          * 
-         * This function resolves the script path for a request, based on the given `path` and the
-         * configuration of the `Location` object. It handles cases where the path matches `_index`,
-         * `_path`, or starts with `_path`, and attempts to map it to a valid file under `_root_directory`.
+         * This function matches the provided `path` against the configured `_path`, `_index`,
+         * and `_files` in the `Location` object to determine the full path of the requested file.
          * 
          * @param path The request path to resolve.
-         * @return The full path to the script if found.
-         * @throws std::runtime_error If the file cannot be resolved based on the request path.
+         * @return The full path to the script if successfully resolved.
+         * @throws std::runtime_error If no matching file is found.
          */
-        std::string findScriptPath(std::string &path) {
-            std::cout << path << ":" << _path << std::endl;
-
-            // Case 1: If the path ends with the configured index file name, return it directly.
-            if (ends_with(path, _index))
+        std::string findScriptPath(const std::string &path) {
+            std::cout << path << " : " << _path << std::endl;
+   
+            // Case 1: Path ends with the configured index file.
+            if (ends_with(path, _index)) {
                 return path;
-
-            // Case 2: If the path exactly matches the configured location path (_path).
-            else if ((path == _path)) {
-                std::string result;
-
-                // Ensure the root directory starts with a leading '/'.
-                if (!starts_with(_root_directory, "/"))
-                    result = "/";
-                result.append(_root_directory);
-
-                // Ensure the root directory ends with a trailing '/'.
-                if (!ends_with(result, "/"))
-                    result.append("/");
-
-                // Append the index file name.
-                result.append(_index);
-                return result;
             }
 
-            // Case 3: If the path starts with the configured location path (_path).
-            else if (starts_with(path, _path)) {
-                std::vector<std::string>::iterator it;
+            // Case 2: Path exactly matches the configured location path (_path).
+            if (path == _path) {
+                return buildFullPath(_root_directory, _index);
+            }
 
-                // Search for a matching file in the `_files` vector.
-                for (it = _files.begin(); it != _files.end(); it++) {
+            // Case 3: Path starts with _path or vice versa (_path starts with path).
+            if (starts_with(path, _path) || starts_with(_path, path)) {
+                
+                // Handle case where path matches _path with a trailing slash.
+                std::string adjustedPath = path + "/";
+                if (adjustedPath == _path) {
+                    return buildFullPath(_root_directory, _index);
+                }
+
+                // Check for a matching file in _files.
+                for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
                     if (ends_with(path, *it)) {
-                        std::string result;
-
-                        // Ensure the root directory starts with a leading '/'.
-                        if (!starts_with(_root_directory, "/"))
-                            result = "/";
-                        result.append(_root_directory);
-
-                        // Ensure the root directory ends with a trailing '/'.
-                        if (!ends_with(result, "/"))
-                            result.append("/");
-
-                        // Append the matching file name.
-                        result.append(*it);
-                        return result;
+                        return buildFullPath(_root_directory, *it);
                     }
                 }
 
-                // If no matching file is found, throw an error.
+                // Throw error if no matching file is found.
                 throw std::runtime_error("Not found file, by path indicated in start line");
             }
 
