@@ -15,8 +15,77 @@
 #include <fcntl.h>
 #include <iostream>
 #include "CGI.hpp"
+#include "utils/endsWith.hpp"
+#include "utils/startsWith.hpp"
+#include <dirent.h> // Para opendir, readdir, closedir
 
+std::vector<std::string> get_all_dirs(const char *dir_path ) {
+    std::vector<std::string> dirs;
+    // Abrir el directorio
+    DIR* dir = opendir(dir_path);
+    if (dir == NULL) {
+        std::cerr << "Error al abrir el directorio" << std::endl;
+        return dirs;
+    }
+    
+    // Leer entradas del directorio
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        // Ignorar las entradas "." y ".."
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            std::string d_name(entry->d_name);
+            dirs.push_back(d_name);
+        }
+    }
+    
+    // Cerrar el directorio
+    closedir(dir);
+    return dirs;
+}
+class Location {
+    private:
+        std::string _path;
+        std::vector<std::string> _allowed_methods;  // GET, POST, etc.
+        std::string _redirect_url;  // Si hay redirección, ejemplo: http://localhost/new-page
+        std::string _index;//El archivo base que se ejecutara en caso de que me den solo _root_directory
+        std::vector<std::string> _files; // Todos los archivos con la _type_extension.
+        std::string _root_directory;  // Directorio o archivo que se sirve.
+        bool _autoindex;  // Para listar directorios.
+        int _client_max_body_size;  // Tamaño máximo del cuerpo de la solicitud (si se aplica).
+        std::string _path_upload_directory;  // Para subir archivos.
+    public:
+        Location(std::string root = "/cgi-bin/", std::string index = "app.py"): _root_directory(root), _index(index){
+            std::vector<std::string>::iterator it;
+            std::vector<std::string> exts;
+            exts.push_back(".py");
+            exts.push_back(".php");
+            exts.push_back(".html");
+            exts.push_back(".js");
+            //TODO busco todos los _files en _root_directory
+            _files = (get_all_dirs(root.c_str() + 1)); // debe moverse +1 porque precisa  archivos sin inicio '/'
+        }
 
+        std::string findScriptPath(std::string & script_path) {
+            if (ends_with(script_path, _index))
+                return script_path;
+            else if (script_path == _root_directory)
+            {
+                script_path.append(_index);
+                return script_path;
+            }
+            else if (starts_with(script_path, _root_directory)){
+                //Busco si script_path coincide con algun archivo ejecutable dentro de _root_directory
+                //TODO: Verificar si inicia con _root_directory
+                
+                std::vector<std::string>::iterator it;
+                for (it = _files.begin(); it != _files.end(); it++)
+                    if (ends_with(script_path, *it))
+                        return script_path;
+                throw std::runtime_error("Not found file, by path indicated in start line");
+            }
+            return "";
+        }
+};
 
 class Server {
 private:
@@ -27,7 +96,8 @@ private:
     int port;
     int _max_clients;
     std::map<int, Client*> clients;
-    std::map<std::string, std::string> _locations;
+    std::vector<Location> _locations;
+    //std::map<std::string, std::string> _locations;
     char **_env;
     void accept_connections() {
         struct sockaddr_in client_address;
@@ -61,11 +131,12 @@ private:
         std::string body = req.get_body();        // Método para obtener el cuerpo del request
         try {
             std::cout << "Execute CGI" << std::endl;
+            std::vector<Location>::iterator it;
 
             //Si me envian un script_path: /cgi-php/ lo busco en locations y verifico a que index pertenece
-            std::string index = _locations[script_path];
-            if (!index.empty())
-                script_path = index;
+            for (it = _locations.begin(); it != _locations.end(); it++)
+                script_path = it->findScriptPath(script_path);
+   
             /* Intentar que cuando el path termine con  / se determine utilice el index en ese path en base al parseo.
             * root: /cgi-php/, index: app.php
             * path: /cgi-php/ -> interpreto que el index es app.php
@@ -88,8 +159,8 @@ private:
 public:
     Server(int port = 8080, int opt = 1, int max_clients = 10 ) : port(port), _opt(opt), _max_clients(max_clients){
     }
-    Server &addLocation(const std::string &key, const std::string &value) {
-        _locations[key] = value;
+    Server &addLocation(const Location &location) {
+        _locations.push_back(location);
         return *this;
     }
     void init() {
