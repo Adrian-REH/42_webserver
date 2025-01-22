@@ -69,6 +69,7 @@ class ParserServer {
 					}
 					if (line.find("root ") != std::string::npos && line.find(";") != std::string::npos){
 						loc.set_root_directory(extractStrBetween(line, "root ", ";"));
+						loc.build();
 						continue ;
 					}
 					if (line.find("autoindex ") != std::string::npos && line.find(";") != std::string::npos){
