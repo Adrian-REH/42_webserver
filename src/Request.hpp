@@ -103,7 +103,6 @@ class Request {
 		 */
 		void parse_request(char *buffer, int byte) {
 			std::string req;
-			size_t cl_pos;
 			size_t content_length = 0;
 			if (buffer && byte > 0)
 				req.append(buffer, byte);
