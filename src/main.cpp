@@ -1,8 +1,10 @@
 #include "Server.hpp"
+#include "ParserServer.hpp"
 
 int main(int argc, char **argv, char **env) {
-	
-	Server srv  = Server().addLocation("/cgi-bin/", "/cgi-bin/app.py");
+	//ParserServer parserSrv;
+	Location loc;
+	Server srv  = Server().addLocation(loc);
 	
 	srv.init();
 	srv.start();
