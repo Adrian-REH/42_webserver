@@ -4,7 +4,7 @@
 int main(int argc, char **argv, char **env) {
 	ParserServer parserSrv;
 
-	std::vector<Server> srvs =  parserSrv.execute();
+ 	std::vector<Server> srvs =  parserSrv.execute();
 	std::vector<Server>::iterator it;
 
 	pid_t *pid = (pid_t *)malloc(sizeof(pid_t) * srvs.size());
