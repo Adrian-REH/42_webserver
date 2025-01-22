@@ -30,7 +30,20 @@ class ParserServer {
 				//----Busco server: srv.push_back()
 				//----------Busco Location
 			}
-			srvs.push_back(Server().addLocation(loc));
+			
+
+			srvs.push_back(Server()
+			.set_port(8080)
+			.addLocation(Location()
+				.set_root_directory("/cgi-bin")
+				.set_index("login.py")
+				.build()));
+/* 			srvs.push_back(Server()
+			.set_port(8081)
+			.addLocation(Location()
+				.set_root_directory("/cgi-bin")
+				.set_index("login.py")
+				.build())); */
 			return srvs;
 		}
 };

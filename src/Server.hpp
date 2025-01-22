@@ -99,7 +99,7 @@ private:
     int epoll_fd;
     struct sockaddr_in address;
     int _opt;
-    int port;
+    int _port;
     int _max_clients;
     std::map<int, Client*> clients;
     std::vector<Location> _locations;
@@ -163,7 +163,12 @@ private:
     }
 
 public:
-    Server(int port = 8080, int opt = 1, int max_clients = 10 ) : port(port), _opt(opt), _max_clients(max_clients){
+    Server(int port = 8080, int opt = 1, int max_clients = 10 ) : _port(port), _opt(opt), _max_clients(max_clients){
+    }
+    
+    Server &set_port(const int &port) {
+        _port=port;
+        return *this;
     }
     Server &addLocation(const Location &location) {
         _locations.push_back(location);
@@ -180,7 +185,7 @@ public:
 
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = htons(port);
+        address.sin_port = htons(_port);
 
         if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
             perror("Error al hacer bind");
@@ -193,7 +198,7 @@ public:
             close(server_fd);
             exit(EXIT_FAILURE);
         }
-        std::cout << "Listen from: " << "INADDR_ANY" << ":" << port << std::endl;
+        std::cout << "Listen from: " << "INADDR_ANY" << ":" << _port << std::endl;
         epoll_fd = epoll_create1(0);
         if (epoll_fd == -1) {
             perror("Error al crear epoll");
