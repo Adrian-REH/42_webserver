@@ -108,6 +108,9 @@
     "streambuf": "cpp",
     "thread": "cpp",
     "typeinfo": "cpp",
-    "sstream": "cpp"
+    "sstream": "cpp",
+    "map": "cpp",
+    "fstream": "cpp",
+    "list": "cpp"
   }
 }
