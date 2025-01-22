@@ -7,10 +7,120 @@
 #include <deque>
 #include <vector>
 
+std::string extractStrBetween(const std::string& line, const std::string& init, const std::string& end) {
+    size_t startPos = line.find(init);
+    if (startPos == std::string::npos) {
+        throw std::invalid_argument("Start delimiter not found in line");
+    }
+    startPos += init.length(); // Mover el inicio justo después del delimitador inicial.
+
+    size_t endPos = line.find(end, startPos);
+    if (endPos == std::string::npos) {
+        throw std::invalid_argument("End delimiter not found in line");
+    }
+
+    return line.substr(startPos, endPos - startPos);
+}
+
 class ParserServer {
 	private:
 		const char *_file_name;
 		std::deque<std::string> _content_file;
+
+		LimitExcept parseLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+			LimitExcept limExc;
+			size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
+			size_t bracketPos = it->find("{", lmtPos); // Encuentra el '}' después de "limit_except "
+			std::string strmethods = it->substr(lmtPos, bracketPos - lmtPos);
+			std::deque<std::string> methods = split(strmethods, ' ');
+			std::deque<std::string>::iterator its;
+			for (its = methods.begin(); its != methods.end(); its++)
+				limExc.addAllowedMethod(*its);
+			for (++it; it != end; ++it) {
+				std::string line = *it;
+				if (line.find("}") != std::string::npos) { // Fin de limit_except
+					std::cout << line << std::endl;
+					break;
+				}
+				else if (line.find("deny ") != std::string::npos && line.find(";") != std::string::npos) {
+					limExc.setDenyAction(extractStrBetween(line, "deny ", ";"));
+					continue ;
+				}
+				//std::cout << line << std::endl; // Procesar línea
+			}
+			return limExc;
+		}
+
+		Location parseLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+			Location loc;
+			loc.set_path(extractStrBetween(*it, "location ", "{"));
+			for (++it; it != end; ++it) {
+				std::string line = (*it);
+				if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
+					std::cout << line << std::endl;
+					loc.set_limit_except(parseLimitExcept(it, end));
+				} else if (line.find("}") != std::string::npos) { // Fin de location
+					std::cout << line << std::endl;
+					return loc;
+				} else {
+					if (line.find("index ") != std::string::npos && line.find(";") != std::string::npos){
+						loc.set_index(extractStrBetween(line, "index ", ";"));
+						continue;
+					}
+					if (line.find("root ") != std::string::npos && line.find(";") != std::string::npos){
+						loc.set_root_directory(extractStrBetween(line, "root ", ";"));
+						continue ;
+					}
+					if (line.find("autoindex ") != std::string::npos && line.find(";") != std::string::npos){
+						loc.set_auto_index(line.find("on") != std::string::npos);
+						continue ;
+					}
+					if (line.find("client_max_body_size ") != std::string::npos && line.find("M;") != std::string::npos){
+						char *endp = NULL;
+						loc.set_client_max_body_size(static_cast<int>(strtod(extractStrBetween(line, "client_max_body_size ", "M;").c_str(), &endp)));
+						continue;
+					}
+					if (line.find("upload_store ") != std::string::npos && line.find(";") != std::string::npos){
+						loc.set_path_upload_directory(extractStrBetween(line, "upload_store ", ";"));
+						continue;
+					}
+					//TODO: Tratar los permisos de path_upload_directory
+					if (line.find("return ") != std::string::npos && line.find(";") != std::string::npos){
+						loc.set_redirect_url(extractStrBetween(line, "return ", ";"));
+						continue;
+					}
+				}
+			}
+			return loc;
+		}
+
+		Server parseServer(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+			Server srv;
+			for (++it; it != end; ++it) {
+				std::string line = (*it);
+				if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
+					std::cout << line << std::endl;
+					srv.addLocation(parseLocation(it, end));
+				} else if (line.find("}") != std::string::npos) { // Fin de server
+					std::cout << line << std::endl;
+					return srv;
+				} else {
+					if (line.find("listen ") != std::string::npos && line.find(";") != std::string::npos) {
+						char *endp;
+						srv.set_port(static_cast<const int>(strtod(extractStrBetween(line, "listen ", ";").c_str(), &endp)));
+						continue ;
+					}
+					if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
+						char *endp;
+						srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
+						continue ;
+					}
+					//std::cout << line << std::endl; // Procesar línea
+					//Identificar propiedades de Server y procesarlo. srv.set_propertie
+				}
+			}
+			return srv;
+		}
 	public:
 		ParserServer(const char *file_name = "ws.conf"):
 		_file_name(file_name),
@@ -23,14 +133,19 @@ class ParserServer {
 			Location loc;
 
 			std::deque<std::string>::iterator it;
+
+			//Verificar sintaxis y 
+			std::cout<< "n_lines of file: " << _content_file.size() << std::endl;
 			if (_content_file.size() <= 0)
 				throw std::runtime_error("Error not config");
-			for (it = _content_file.begin(); it != _content_file.end(); it++ ) {
-				//Busco http: std::vector<Server> srv
-				//----Busco server: srv.push_back()
-				//----------Busco Location
+			for (it = _content_file.begin(); it != _content_file.end(); ++it) {
+				std::string line = (*it);
+				if (line.find("server {") != std::string::npos) {
+					std::cout << line << std::endl;
+					// srvs.push_back(parseServer(it, _content_file.end()));
+					parseServer(it, _content_file.end());
+				}
 			}
-			
 
 			srvs.push_back(Server()
 			.set_port(8080)
