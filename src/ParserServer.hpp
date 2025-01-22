@@ -7,6 +7,7 @@
 #include <deque>
 #include <vector>
 
+// TODO: Extract function to hpp cpp
 std::string extractStrBetween(const std::string& line, const std::string& init, const std::string& end) {
     size_t startPos = line.find(init);
     if (startPos == std::string::npos) {
@@ -131,8 +132,6 @@ class ParserServer {
 		 */
 		std::vector<Server> execute() {
 			std::vector<Server> srvs;
-			Location loc;
-
 			std::deque<std::string>::iterator it;
 
 			//Verificar sintaxis y 
@@ -141,7 +140,7 @@ class ParserServer {
 				throw std::runtime_error("Error not config");
 			for (it = _content_file.begin(); it != _content_file.end(); ++it) {
 				std::string line = (*it);
-				if (line.find("server {") != std::string::npos) {
+				if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
 					std::cout << line << std::endl;
 					// srvs.push_back(parseServer(it, _content_file.end()));
 					parseServer(it, _content_file.end());
@@ -155,12 +154,13 @@ class ParserServer {
 				.set_root_directory("/cgi-bin")
 				.set_index("login.py")
 				.build()));
-/* 			srvs.push_back(Server()
+			srvs.push_back(Server()
 			.set_port(8081)
 			.addLocation(Location()
+				.set_path("/cgi-bin/")
 				.set_root_directory("/cgi-bin")
 				.set_index("login.py")
-				.build())); */
+				.build()));
 			return srvs;
 		}
 };

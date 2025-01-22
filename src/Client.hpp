@@ -18,29 +18,29 @@ private:
 	Request _request;
 
 public:
-    /**
-     * @brief Constructor de la clase `Client`.
-     * 
-     * Inicializa un cliente con el descriptor de archivo del socket proporcionado
-     * y crea un objeto `Request` vacío.
-     * 
-     * @param socket_fd Descriptor de archivo del socket asociado al cliente.
-     */
+	/**
+	 * @brief Constructor de la clase `Client`.
+	 * 
+	 * Inicializa un cliente con el descriptor de archivo del socket proporcionado
+	 * y crea un objeto `Request` vacío.
+	 * 
+	 * @param socket_fd Descriptor de archivo del socket asociado al cliente.
+	 */
 	Client(int socket_fd) : _socket_fd(socket_fd), _request() {}
-    /**
-     * @brief Destructor de la clase `Client`.
-     * 
-     * Libera los recursos asociados con el cliente. Actualmente no realiza
-     * ninguna acción explícita.
-     */
+	/**
+	 * @brief Destructor de la clase `Client`.
+	 * 
+	 * Libera los recursos asociados con el cliente. Actualmente no realiza
+	 * ninguna acción explícita.
+	 */
 	~Client() {}
-    /**
-     * @brief Obtiene la solicitud (`Request`) del cliente.
-     * 
-     * Este método devuelve una copia del objeto `Request` asociado al cliente.
-     * 
-     * @return Una copia del objeto `Request` del cliente.
-     */
+	/**
+	 * @brief Obtiene la solicitud (`Request`) del cliente.
+	 * 
+	 * Este método devuelve una copia del objeto `Request` asociado al cliente.
+	 * 
+	 * @return Una copia del objeto `Request` del cliente.
+	 */
 	Request get_request() const {
 		return _request;
 	}
@@ -65,18 +65,18 @@ public:
 	 * @return true Si se reciben datos correctamente y se procesan.
 	 * @return false Si el cliente se desconecta o no se reciben datos.
 	 */
-	bool receive_data() {
+	int receive_data() {
 		char buffer[1024];
 		int bytes_received = recv(_socket_fd, buffer, sizeof(buffer), 0);
 		if (bytes_received > 0) {
 			std::cout << "Parser Request "<< std::endl;
 			_request.parse_request(buffer, bytes_received);
-			return true;
+			return 0;
 		} else {
 			// Cliente desconectado
 			std::cout << "Cliente desconectado, socket fd: " << _socket_fd << "\n";
 			close(_socket_fd);
-			return false;
+			return -1;
 		}
 	}
 	/**
