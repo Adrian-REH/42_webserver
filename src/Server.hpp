@@ -54,22 +54,28 @@ class Location {
         int _client_max_body_size;  // Tamaño máximo del cuerpo de la solicitud (si se aplica).
         std::string _path_upload_directory;  // Para subir archivos.
     public:
-        Location(std::string root = "/cgi-bin/", std::string index = "app.py"): _root_directory(root), _index(index){
-            std::vector<std::string>::iterator it;
-            std::vector<std::string> exts;
-            exts.push_back(".py");
-            exts.push_back(".php");
-            exts.push_back(".html");
-            exts.push_back(".js");
-            //TODO busco todos los _files en _root_directory
-            _files = (get_all_dirs(root.c_str() + 1)); // debe moverse +1 porque precisa  archivos sin inicio '/'
+        Location() {}
+        Location &set_root_directory(const std::string &root) {
+            _root_directory = root;
+            return *this;
         }
-
+        Location &set_index(const std::string &index) {
+            _index = index;
+            return *this;
+        }
+        Location build() {
+            if (_root_directory.empty())
+                throw std::runtime_error("Error no existe un directorio root");
+            _files = (get_all_dirs(_root_directory.c_str() + 1)); // debe moverse +1 porque precisa  archivos sin inicio '/'
+            return *this;
+        }
         std::string findScriptPath(std::string & script_path) {
+            std::cout << script_path<< ":" << _root_directory<< std::endl;
             if (ends_with(script_path, _index))
                 return script_path;
             else if (script_path == _root_directory)
             {
+                script_path.append("/");
                 script_path.append(_index);
                 return script_path;
             }
