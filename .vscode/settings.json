@@ -111,6 +111,9 @@
     "sstream": "cpp",
     "map": "cpp",
     "fstream": "cpp",
-    "list": "cpp"
+    "list": "cpp",
+    "unordered_set": "cpp",
+    "set": "cpp",
+    "cinttypes": "cpp"
   }
 }
