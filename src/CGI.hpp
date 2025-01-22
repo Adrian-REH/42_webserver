@@ -3,6 +3,14 @@
 #include <string>
 #include <sys/wait.h>
 
+/**
+ * @brief Verifica si una cadena termina con un sufijo específico.
+ * 
+ * @param str Cadena principal.
+ * @param suffix Sufijo a comprobar.
+ * @return true Si la cadena termina con el sufijo.
+ * @return false En caso contrario.
+ */
 bool ends_with(const std::string& str, const std::string& suffix) {
     if (str.size() < suffix.size()) {
         return false;  // No puede terminar con el sufijo si es más pequeño
@@ -10,6 +18,12 @@ bool ends_with(const std::string& str, const std::string& suffix) {
     return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
+/**
+ * @brief Clase para gestionar la ejecución de scripts CGI.
+ * 
+ * La clase `CGI` permite configurar y ejecutar scripts CGI en el servidor, 
+ * determinando el intérprete adecuado según el tipo de archivo.
+ */
 class CGI {
 private:
     std::string _script_path;
@@ -18,12 +32,22 @@ private:
     char** _env;
 
 public:
+    /**
+     * @brief Constructor de la clase CGI.
+     * 
+     * @param script_path Ruta al script a ejecutar.
+     * @param method Método HTTP asociado al script.
+     * @param body Cuerpo de la solicitud HTTP.
+     * @param env Variables de entorno para la ejecución.
+     */
     CGI(const std::string& script_path, const std::string& method, const std::string& body, char** env)
         : _script_path(script_path), _method(method), _body(body), _env(env) {}
 
     /**
-     * @brief Interpreto si el path contiene una extencion y determino su comando de ejecucion
+     * @brief Determina el intérprete adecuado para el script según su extensión.
      * 
+     * @return Ruta al ejecutable del intérprete correspondiente.
+     * @throws std::runtime_error Si el tipo de script no está soportado.
      */
     std::string determine_interpreter() const {
         if (ends_with(_script_path, ".py")) {
@@ -36,7 +60,15 @@ public:
             throw std::runtime_error("Unsupported script type: " + _script_path);
         }
     }
-
+    /**
+     * @brief Ejecuta el script CGI y devuelve su salida.
+     * 
+     * Crea un proceso hijo que ejecuta el script CGI utilizando el intérprete correspondiente.
+     * Captura la salida del script y la devuelve como una respuesta HTTP.
+     * 
+     * @return Respuesta HTTP generada por el script CGI.
+     * @throws std::runtime_error Si falla la creación del pipe o el fork.
+     */
     std::string execute() {
         int status;
         int io[2];
@@ -78,6 +110,7 @@ public:
             waitpid(pid, &status, 0);
             
             status = WEXITSTATUS(status);
+            //TODO: Intentar devolver multiples codigos de error
             std::string result = "HTTP/1.1 200 OK\r\n";
             if (status)
                 result = "HTTP/1.1 500 Server Internal Error";
