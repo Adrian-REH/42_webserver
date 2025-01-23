@@ -21,10 +21,68 @@
 #include <set>
 #include "Location.hpp"
 #include "LimitExcept.hpp"
+#include <string>
+#include <ctime> // Para time_t
+#include "utils/randomID.hpp"
+#include "utils/extractStrBetween.hpp"
+
+
+
+
+class Cookie {
+private:
+    std::string _session_id;
+    time_t _expiration;
+	std::string _session;
+
+public:
+	Cookie() :_expiration(0) ,_session_id(""), _session(""){}
+    // Constructor
+    Cookie(const std::string& session_id, time_t expiration, const std::string &session)
+        : _session_id(session_id), _expiration(expiration), _session(session) {}
+
+    // Getter para session_id
+    const std::string& get_session_id() const {
+        return _session_id;
+    }
+
+    // Getter para expiration
+    time_t getExpiration() const {
+        return _expiration;
+    }
+	Cookie& operator=(const Cookie & cook) {
+		if (this == &cook)
+			return (*this);
+		this->_session = cook._session;
+		this->_expiration = cook._expiration;
+		this->_session_id = cook._session_id;
+		return *this;
+	}
+    // Método para verificar si la cookie ha expirado
+    bool isExpired() const {
+        return std::time(NULL) > _expiration;
+    }
+    Cookie& set_session(const std::string & session) {
+		_session = session;
+		return *this;
+    }
+    std::string get_session() const {
+		return _session;
+    }
+
+    // Método para renovar la cookie
+    void renew(time_t new_expiration) {
+        _expiration = new_expiration;
+    }
+	bool empty() {
+		return (_expiration==0 && _session_id.empty());
+	}
+};
 
 class Server {
 private:
 	int _port;
+	std::vector<Cookie> _cookies;
 	std::string _server_name;
 	std::map<int, Client*> clients; // TODO: rename this to _clients
 	std::vector<Location> _locations;
@@ -34,6 +92,40 @@ private:
 	int _opt;
 	int _max_clients;
 	char **_env;
+	size_t _env_len;
+
+	Cookie validate_session_id(std::string &session_id) {
+		std::vector<Cookie>::iterator it;
+		for (it = _cookies.begin(); it != _cookies.end(); it++) {
+			if (it->get_session_id() == session_id){
+				if (it->isExpired())
+					return ( _cookies.erase(it), Cookie());
+				return (*it);
+			}
+		}
+		return Cookie();
+	}
+	
+	void add_env( std::string key, std::string value) {
+		int i  = -1;
+		char **new_env = reinterpret_cast<char**>(malloc(sizeof(char*) * (_env_len + 2)));
+		if (!new_env)
+			return ;
+		for (int i = 0; i < _env_len; i++) {
+			new_env[i] = _env[i];
+		}
+		std::string env_entry = key + "=" + value;
+		new_env[_env_len] = strdup(env_entry.c_str());
+		if (!new_env[_env_len])
+			return ;
+		new_env[_env_len + 1] = 0;
+
+/* 		if(_env)
+			clear_env();
+ */		_env = new_env;
+		++_env_len;
+	}
+	
 	bool accept_connections() {
 		struct sockaddr_in client_address;
 		socklen_t client_len = sizeof(client_address);
@@ -59,10 +151,29 @@ private:
 			std::cerr << "[ERROR] Null client pointer for FD " << client_fd << std::endl;
 			return -1;
 		}
+		std::cout << "[DEBUG] Display_header: " << std::endl;
+		client->get_request().display_header();
 		std::cout << "[INFO] Executing client request for FD: " << client_fd << std::endl;
 		execute(*client);
 		std::cout << "[INFO] Successfully completed request for client FD: " << client_fd << std::endl;
 		return 0;
+	}
+	Cookie handle_cookie_session(std::string cookieHeader) {
+		Cookie cook;
+		std::string sessionID;
+		cookieHeader.append(" ");
+		if (cookieHeader.find("session_id=") != std::string::npos) {
+			sessionID = extractStrBetween(cookieHeader, "session_id=", " ");
+			cook = validate_session_id(sessionID);
+			if (cook.empty()){
+				sessionID = generateSessionID(16); // Genera un nuevo session_id
+				return Cookie(sessionID, std::time(0), "invalid");
+			}
+			else
+				return cook;
+		}
+		sessionID = generateSessionID(16); // No se encontró el session_id, generar uno nuevo
+		return (Cookie(sessionID, std::time(0), "invalid"));
 	}
 
 	void execute(Client &client) {
@@ -92,26 +203,77 @@ private:
 				throw std::runtime_error("No script found for the given path");
 			}
 
+			std::string rs;
+			std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
+
+			//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
+			std::string cookie_val = req.get_header_by_key("Cookie");
+			std::cout << "[INFO] Verifing Cookie: " << cookie_val << std::endl;
+			Cookie cookie = handle_cookie_session(cookie_val);
+			//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
+			add_env("HTTP_COOKIE", ("session=" + cookie.get_session() + "&session_id=" + cookie.get_session_id()));
 			std::cout << "[INFO] Executing script: " << path << std::endl;
-			std::string result = CGI(path, method, body, _env).execute();
-
-			std::cout << "[INFO] Sending response to client. Response size: " << result.size() << " bytes" << std::endl;
-			client.send_response(result);
-
-		} catch (const std::exception& e) {
+			//Gestiono la respuesta de la ejecucion del CGI
+			rs = CGI(path, method, body, _env).execute();
+			if (rs.find("Set-Cookie: session_id:") != std::string::npos)
+				cookie.set_session("valid");
+			if (!cookie.empty())
+				_cookies.push_back(cookie);
+			rs_start_line.append(rs);
+			std::cout << "[INFO] Sending response to client. Response size: " << rs_start_line.size() << " bytes" << std::endl;
+			client.send_response(rs_start_line);
+		}
+		catch (const std::exception& e)
+		{
 			std::cerr << "[ERROR] CGI execution failed: " << e.what() << std::endl;
 			std::cerr << "[ERROR] Request details: path = " << path 
 					<< ", method = " << method 
 					<< ", body size = " << body.size() << " bytes" << std::endl;
 			client.send_error(500, "Internal Server Error");
 		}
-
 	}
 
 public:
-	Server(int port = 8080, int opt = 1, int max_clients = 10 ) : _port(port), _opt(opt), _max_clients(max_clients){
+	Server(int port = 8080, int opt = 1, int max_clients = 10 ) : _port(port), _opt(opt), _max_clients(max_clients), _env_len(0){
 	}
-	
+	void clear_env() {
+		if (_env) {
+			int i = -1;
+			while (_env[++i])
+				free(_env[i]);
+			free(_env);
+			_env = NULL; // Prevenir liberaciones dobles
+		}
+		_env_len = 0;
+	}
+	Server &set_env(char **env) {
+       // Contamos las variables de entorno
+        size_t count = 0;
+        while (env[count] != 0) {
+            ++count;
+        }
+        _env_len = count;
+        // Asignamos memoria para _env
+        _env = reinterpret_cast<char**>(malloc(sizeof(char*) * (_env_len + 1)));
+        if (!_env) {
+            // Si falla malloc, dejamos _env como nullptr y devolvemos *this
+            _env_len = 0;
+            return *this;
+        }
+
+        // Copiamos las cadenas del entorno
+        for (size_t i = 0; i < _env_len; ++i) {
+            _env[i] = strdup(env[i]); // Duplicamos cada cadena
+            if (!_env[i]) {
+                // Si falla strdup, liberamos toda la memoria y salimos
+                clear_env();
+                return *this;
+            }
+        }
+        _env[_env_len] = 0; // Terminamos el array con nullptr
+
+        return *this;
+    }
 	Server &set_port(const int &port) {
 		_port=port;
 		return *this;
@@ -142,7 +304,6 @@ public:
 			close(server_fd);
 			exit(EXIT_FAILURE);
 		}
-
 		if (listen(server_fd, _max_clients) < 0) {
 			perror("Error al hacer listen");
 			close(server_fd);

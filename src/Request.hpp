@@ -61,6 +61,7 @@ class Request {
 		void parse_headers(const std::string& headers_section) {
 			std::istringstream stream(headers_section);
 			std::string line;
+			//TODO: Error with parser header example: Cookie : session_id=14332Content-Type: text/html
 			//Itero linea a linea buscando : para parsear key value to map
 			while (std::getline(stream, line) && line != "\r") {
 				size_t colon_pos = line.find(": ");
@@ -135,6 +136,15 @@ class Request {
 		}
 		std::string get_body() const {
 			return _body;
+		}
+		std::string get_header_by_key(const std::string &key) {
+			return _headers[key];
+		}
+		void display_header() {
+			std::map<std::string, std::string>::iterator it;
+			for (it = _headers.begin(); it != _headers.end(); it ++){
+				std::cout << it->first << " : " << it->second << std::endl;
+			}
 		}
 };
 #endif

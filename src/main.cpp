@@ -20,7 +20,7 @@ int main(int argc, char **argv, char **env) {
 	ParserServer parserSrv;
 	size_t n_server;
 
-	std::vector<Server> srvs =  parserSrv.execute();
+	std::vector<Server> srvs =  parserSrv.execute(env);
 	std::vector<Server>::iterator it;
 
 	n_server = srvs.size();

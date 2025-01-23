@@ -85,25 +85,25 @@ public:
 					(char*)_body.c_str(),
 					NULL
 				};
-
 				execve(interpreter.c_str(), argv, _env);
-				perror("execve");
 				exit(EXIT_FAILURE);
 			} catch (const std::exception&  ) {
-				exit(EXIT_FAILURE);
+				exit(2);
 			}
 		} else {
 			// Padre: Leer la salida del hijo
 			close(io[1]);
 			waitpid(pid, &status, 0);
-			
 			status = WEXITSTATUS(status);
 			// TODO: Intentar devolver multiples codigos de error
-			std::string result = "HTTP/1.1 200 OK\r\n";
-			if (status)
-				return (close(io[0]), "HTTP/1.1 500 Server Internal Error\r\n");
-			result.append(readFd(io[0]));
-			return (close(io[0]), result);
+			if (status) {
+				close(io[0]);
+				std::string error(strerror(status));
+				throw std::runtime_error("Error en la ejecucion del CGI, Error : " + to_string(status) +  ", script_path: " + _script_path + ", body:" + _body);
+			}
+			std::string result = readFd(io[0]);
+			close(io[0]);
+			return (result);
 		}
 	}
 };

@@ -2,11 +2,34 @@
 import cgi
 import http.cookies
 from login_form import loginForm  # Importa la función loginForm
-# TODO: Hacer funcionar home() y verify_session() y conectarlo.
+import os
+
+def verify_session():
+    try:
+        cookie_header = os.environ.get('HTTP_COOKIE', '')
+        if not cookie_header:
+            return False
+        cookie = http.cookies.SimpleCookie(cookie_header)
+        if 'session_id' in cookie:
+            session_id = cookie['session_id'].value
+            return session_id if session_id else False
+        return False
+    except Exception as e:
+        print(f"Error procesando cookies: {e}")
+        return False
+
+# TODO: Hacer funcionar home() y verify_session() y conectarlo con e
 def success():
 	mensaje = "¡Bienvenido, usuario logueado!"
 	mensaje_class = "success"
-	print("Content-type: text/html\n")
+	session_id = verify_session()
+	if not session_id:
+		print("Content-Type: text/html\r\n")
+		print("<h1>Error: Sesión inválida</h1>")
+		return False
+	print(f"Set-Cookie: session_id={session_id}\r\n")
+	#print(f"""Set-Cookie: session_id={session_id}\r\n""")
+	print("Content-Type: text/html\r\n")
 	print(f"""
 	<!DOCTYPE html>
 	<html lang="es">
