@@ -1,7 +1,16 @@
 # auth.py
 import http.cookies
-
 def verify_session():
-	cookie = http.cookies.SimpleCookie(os.environ.get('HTTP_COOKIE'))
-	return 'session' in cookie and cookie['session'].value == 'valid'
+    try:
+        cookie_header = os.environ.get('HTTP_COOKIE', '')
+        if not cookie_header:
+            return False
+        cookie = http.cookies.SimpleCookie(cookie_header)
+        if 'session' in cookie:
+            session = cookie['session'].value
+            return session if session else False
+        return False
+    except Exception as e:
+        print(f"Error procesando cookies: {e}")
+        return False
 

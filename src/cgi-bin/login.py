@@ -24,11 +24,11 @@ def success():
 	mensaje_class = "success"
 	session_id = verify_session()
 	if not session_id:
+		print(f"Set-Cookie: session_id={session_id}\r\n")
 		print("Content-Type: text/html\r\n")
 		print("<h1>Error: Sesión inválida</h1>")
 		return False
-	print(f"Set-Cookie: session_id={session_id}\r\n")
-	#print(f"""Set-Cookie: session_id={session_id}\r\n""")
+	print(f"Set-Cookie: session_id={session_id}")
 	print("Content-Type: text/html\r\n")
 	print(f"""
 	<!DOCTYPE html>
