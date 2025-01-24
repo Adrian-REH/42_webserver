@@ -27,19 +27,28 @@
 #include "utils/extractStrBetween.hpp"
 
 
+std::string strtrim(const std::string& str) {
+	size_t start;
+	size_t end;
 
+	start = str.find_first_not_of(" \t\n\r\f\v");
+	if (start == std::string::npos)
+		return ("");
+	end = str.find_last_not_of(" \t\n\r\f\v");
+	return (str.substr(start, end - start + 1));
+}
 
 class Cookie {
 private:
     std::string _session_id;
-    time_t _expiration;
+    std::time_t _expiration;
 	std::string _session;
 
 public:
 	Cookie() :_expiration(0) ,_session_id(""), _session(""){}
     // Constructor
-    Cookie(const std::string& session_id, time_t expiration, const std::string &session)
-        : _session_id(session_id), _expiration(expiration), _session(session) {}
+    Cookie(const std::string& session_id, const std::string &session)
+        : _session_id(session_id), _expiration(std::time(0) + (1 * 24 * 60 * 60)), _session(session) {}
 
     // Getter para session_id
     const std::string& get_session_id() const {
@@ -97,7 +106,7 @@ private:
 	Cookie validate_session_id(std::string &session_id) {
 		std::vector<Cookie>::iterator it;
 		for (it = _cookies.begin(); it != _cookies.end(); it++) {
-			if (it->get_session_id() == session_id){
+			if (std::string(it->get_session_id()) == std::string(session_id)){
 				if (it->isExpired())
 					return ( _cookies.erase(it), Cookie());
 				return (*it);
@@ -151,7 +160,6 @@ private:
 			std::cerr << "[ERROR] Null client pointer for FD " << client_fd << std::endl;
 			return -1;
 		}
-		std::cout << "[DEBUG] Display_header: " << std::endl;
 		client->get_request().display_header();
 		std::cout << "[INFO] Executing client request for FD: " << client_fd << std::endl;
 		execute(*client);
@@ -163,17 +171,18 @@ private:
 		std::string sessionID;
 		cookieHeader.append(" ");
 		if (cookieHeader.find("session_id=") != std::string::npos) {
-			sessionID = extractStrBetween(cookieHeader, "session_id=", " ");
+			sessionID = extractStrEnd(cookieHeader, "session_id=");
+			sessionID = strtrim(sessionID);
 			cook = validate_session_id(sessionID);
+
 			if (cook.empty()){
 				sessionID = generateSessionID(16); // Genera un nuevo session_id
-				return Cookie(sessionID, std::time(0), "invalid");
+				return Cookie(sessionID, "invalid");
 			}
-			else
-				return cook;
+			return cook;
 		}
 		sessionID = generateSessionID(16); // No se encontró el session_id, generar uno nuevo
-		return (Cookie(sessionID, std::time(0), "invalid"));
+		return (Cookie(sessionID, "invalid"));
 	}
 
 	void execute(Client &client) {
@@ -211,16 +220,22 @@ private:
 			std::cout << "[INFO] Verifing Cookie: " << cookie_val << std::endl;
 			Cookie cookie = handle_cookie_session(cookie_val);
 			//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
-			add_env("HTTP_COOKIE", ("session=" + cookie.get_session() + "&session_id=" + cookie.get_session_id()));
+
+			std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
+			char* env[] = {
+				(char*)http_cookie.c_str(),
+				NULL
+			};
 			std::cout << "[INFO] Executing script: " << path << std::endl;
 			//Gestiono la respuesta de la ejecucion del CGI
-			rs = CGI(path, method, body, _env).execute();
-			if (rs.find("Set-Cookie: session_id:") != std::string::npos)
+			rs = CGI(path, method, body, env).execute();
+			if (rs.find("Set-Cookie: session_id=") != std::string::npos){
 				cookie.set_session("valid");
-			if (!cookie.empty())
-				_cookies.push_back(cookie);
+				if (!cookie.empty())
+					_cookies.push_back(cookie);
+			}
 			rs_start_line.append(rs);
-			std::cout << "[INFO] Sending response to client. Response size: " << rs_start_line.size() << " bytes" << std::endl;
+			std::cout << "[INFO] Sending response to client. Response size: "<< rs_start_line << " " << rs_start_line.size() << " bytes" << std::endl;
 			client.send_response(rs_start_line);
 		}
 		catch (const std::exception& e)
