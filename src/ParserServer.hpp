@@ -133,7 +133,6 @@ class ParserServer {
 			}
 
 			srvs.push_back(Server()
-			.set_env(env)
 			.set_port(8080)
 			.addLocation(Location()
 				.set_path("/cgi-bin/")
@@ -141,7 +140,6 @@ class ParserServer {
 				.set_index("login.py")
 				.build()));
 			srvs.push_back(Server()
-			.set_env(env)
 			.set_port(8081)
 			.addLocation(Location()
 				.set_path("/cgi-bin/")

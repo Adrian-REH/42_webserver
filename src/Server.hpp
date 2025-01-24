@@ -100,7 +100,6 @@ private:
 	struct sockaddr_in address; // TODO: rename this to _address
 	int _opt;
 	int _max_clients;
-	char **_env;
 	size_t _env_len;
 
 	Cookie validate_session_id(std::string &session_id) {
@@ -114,26 +113,7 @@ private:
 		}
 		return Cookie();
 	}
-	
-	void add_env( std::string key, std::string value) {
-		int i  = -1;
-		char **new_env = reinterpret_cast<char**>(malloc(sizeof(char*) * (_env_len + 2)));
-		if (!new_env)
-			return ;
-		for (int i = 0; i < _env_len; i++) {
-			new_env[i] = _env[i];
-		}
-		std::string env_entry = key + "=" + value;
-		new_env[_env_len] = strdup(env_entry.c_str());
-		if (!new_env[_env_len])
-			return ;
-		new_env[_env_len + 1] = 0;
 
-/* 		if(_env)
-			clear_env();
- */		_env = new_env;
-		++_env_len;
-	}
 	
 	bool accept_connections() {
 		struct sockaddr_in client_address;
@@ -251,44 +231,7 @@ private:
 public:
 	Server(int port = 8080, int opt = 1, int max_clients = 10 ) : _port(port), _opt(opt), _max_clients(max_clients), _env_len(0){
 	}
-	void clear_env() {
-		if (_env) {
-			int i = -1;
-			while (_env[++i])
-				free(_env[i]);
-			free(_env);
-			_env = NULL; // Prevenir liberaciones dobles
-		}
-		_env_len = 0;
-	}
-	Server &set_env(char **env) {
-       // Contamos las variables de entorno
-        size_t count = 0;
-        while (env[count] != 0) {
-            ++count;
-        }
-        _env_len = count;
-        // Asignamos memoria para _env
-        _env = reinterpret_cast<char**>(malloc(sizeof(char*) * (_env_len + 1)));
-        if (!_env) {
-            // Si falla malloc, dejamos _env como nullptr y devolvemos *this
-            _env_len = 0;
-            return *this;
-        }
 
-        // Copiamos las cadenas del entorno
-        for (size_t i = 0; i < _env_len; ++i) {
-            _env[i] = strdup(env[i]); // Duplicamos cada cadena
-            if (!_env[i]) {
-                // Si falla strdup, liberamos toda la memoria y salimos
-                clear_env();
-                return *this;
-            }
-        }
-        _env[_env_len] = 0; // Terminamos el array con nullptr
-
-        return *this;
-    }
 	Server &set_port(const int &port) {
 		_port=port;
 		return *this;
