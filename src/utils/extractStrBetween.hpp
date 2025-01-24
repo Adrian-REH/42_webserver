@@ -19,5 +19,13 @@ std::string extractStrBetween(const std::string& line, const std::string& init, 
     return line.substr(startPos, endPos - startPos);
 }
 
+std::string extractStrEnd(const std::string& line, const std::string& init) {
+    size_t startPos = line.find(init);
+    if (startPos == std::string::npos) {
+        throw std::invalid_argument("Start delimiter not found in line");
+    }
+    startPos += init.length(); // Mover el inicio justo después del delimitador inicial.
 
+    return line.substr(startPos, line.length());
+}
 #endif
