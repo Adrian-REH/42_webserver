@@ -1,5 +1,4 @@
-#ifndef PARSER_HPP
-#define PARSER_HPP
+#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +25,7 @@
 #include "utils/randomID.hpp"
 #include "utils/extractStrBetween.hpp"
 
-
+#pragma region utils
 std::string strtrim(const std::string& str) {
 	size_t start;
 	size_t end;
@@ -37,6 +36,9 @@ std::string strtrim(const std::string& str) {
 	end = str.find_last_not_of(" \t\n\r\f\v");
 	return (str.substr(start, end - start + 1));
 }
+#pragma endregion
+
+#pragma region Cookie
 
 class Cookie {
 private:
@@ -88,6 +90,9 @@ public:
 	}
 };
 
+#pragma endregion 
+
+#pragma region Server
 class Server {
 private:
 	int _port;
@@ -325,7 +330,5 @@ public:
 		close(epoll_fd);
 	}
 };
+#pragma endregion
 
-
-
-#endif
