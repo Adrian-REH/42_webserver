@@ -97,7 +97,7 @@ class ParserServer {
 						continue ;
 					}
 					if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
-						char *endp;
+						//char *endp; TODO
 						srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
 						continue ;
 					}
@@ -118,6 +118,7 @@ class ParserServer {
 			std::vector<Server> srvs;
 			std::deque<std::string>::iterator it;
 
+			std::cout<< "env " << env[0] << std::endl; // TODO: borrar linea
 			//Verificar sintaxis y 
 			std::cout<< "n_lines of file: " << _content_file.size() << std::endl;
 			if (_content_file.size() <= 0)

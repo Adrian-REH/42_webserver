@@ -11,8 +11,8 @@
 # **************************************************************************** #
 
 NAME = WEBS
-CC = c++
-CFLAGS = -std=c++98
+CXX = c++
+CXFLAGS = -Wall -Werror -Wextra -std=c++98 -g
 SRCS = main.cpp
 COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = 
@@ -23,14 +23,14 @@ OBJS = ${SRCS:.cpp=.o}
 
 # Compilar el ejecutable
 $(NAME): $(OBJS) $(INCLUDE)
-			$(CC) -o $(NAME) $(CFLAGS) $(COVFLAGS) $(OBJS)
+			$(CXX) -o $(NAME) $(CXFLAGS) $(COVFLAGS) $(OBJS)
 			
 all: $(NAME)
 
 
 # Regla para compilar los archivos .o
 %.o:%.cpp $(INCLUDE)
-		$(CC) $(CFLAGS)$(COVFLAGS)  -c $< -o $@
+		$(CXX) $(CXFLAGS) $(COVFLAGS)  -c $< -o $@
 
 # Limpiar los archivos generados
 clean:

@@ -47,7 +47,7 @@ private:
 	std::string _session;
 
 public:
-	Cookie() :_expiration(0) ,_session_id(""), _session(""){}
+	Cookie() : _session_id(""), _expiration(0), _session(""){}
     // Constructor
     Cookie(const std::string& session_id, const std::string &session)
         : _session_id(session_id), _expiration(std::time(0) + (1 * 24 * 60 * 60)), _session(session) {}
@@ -98,15 +98,17 @@ private:
 	int _port;
 	std::vector<Cookie> _cookies;
 	std::string _server_name;
-	std::map<int, Client*> clients; // TODO: rename this to _clients
+	std::map<int, Client*> _clients;
 	std::vector<Location> _locations;
 	int server_fd;
 	int epoll_fd;
-	struct sockaddr_in address; // TODO: rename this to _address
+	struct sockaddr_in _address;
 	int _opt;
 	int _max_clients;
 	size_t _env_len;
 
+	struct epoll_event ev;
+	
 	Cookie validate_session_id(std::string &session_id) {
 		std::vector<Cookie>::iterator it;
 		for (it = _cookies.begin(); it != _cookies.end(); it++) {
@@ -128,29 +130,50 @@ private:
 			perror("Error al aceptar la conexión");
 			return 0;
 		}
+		fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
-		struct epoll_event ev;
 		ev.events = EPOLLIN | EPOLLET;
 		ev.data.fd = client_fd;
 		epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
+
 		Client* new_client = new Client(client_fd);
-		clients[client_fd] = new_client;
-		return 0;
+		_clients[client_fd] = new_client;
+		return 1;
+	}
+
+	void set_event_action(int client_fd, uint32_t action)
+	{
+		if (action == 1)
+			ev.events = EPOLLOUT | EPOLLET;
+		else if (action == 2)
+			ev.events = EPOLLIN | EPOLLET;
+		ev.data.fd = client_fd;
+		epoll_ctl(epoll_fd, EPOLL_CTL_MOD, client_fd, &ev);
 	}
 
 	int handle_client(int client_fd) {
-
-		Client* client = clients[client_fd];
+		Client* client = _clients[client_fd]; //TODO: Añadir find()
 		if (client->receive_data() < 0) {
 			std::cerr << "[ERROR] Null client pointer for FD " << client_fd << std::endl;
 			return -1;
 		}
+		std::cout << "[INFO] uuuuu " << client_fd << std::endl;
 		client->get_request().display_header();
+		std::cout << "[INFO] Changing event action for FD: " << client_fd << std::endl;
+		set_event_action(client_fd, 1);
+		return 0;
+	}
+
+	int handle_output_client(int client_fd) {
+
+		Client* client = _clients[client_fd];
 		std::cout << "[INFO] Executing client request for FD: " << client_fd << std::endl;
 		execute(*client);
 		std::cout << "[INFO] Successfully completed request for client FD: " << client_fd << std::endl;
+		set_event_action(client_fd, 2);
 		return 0;
 	}
+
 	Cookie handle_cookie_session(std::string cookieHeader) {
 		Cookie cook;
 		std::string sessionID;
@@ -241,14 +264,17 @@ public:
 		_port=port;
 		return *this;
 	}
+
 	Server &set_server_name(const std::string &server_name) {
 		_server_name = server_name;
 		return *this;
 	}
+
 	Server &addLocation(const Location &location) {
 		_locations.push_back(location);
 		return *this;
 	}
+	
 	void init() {
 		server_fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (server_fd == -1) {
@@ -258,11 +284,13 @@ public:
 
 		setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &_opt, sizeof(_opt));
 
-		address.sin_family = AF_INET;
-		address.sin_addr.s_addr = INADDR_ANY;
-		address.sin_port = htons(_port);
+		fcntl(server_fd, F_SETFL, O_NONBLOCK);
 
-		if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+		_address.sin_family = AF_INET;
+		_address.sin_addr.s_addr = INADDR_ANY;
+		_address.sin_port = htons(_port);
+
+		if (bind(server_fd, (struct sockaddr *)&_address, sizeof(_address)) < 0) {
 			perror("Error al hacer bind");
 			close(server_fd);
 			exit(EXIT_FAILURE);
@@ -283,19 +311,30 @@ public:
 	}
 
 	void start() {
-		struct epoll_event ev;
 		struct epoll_event events[_max_clients];
+		
 
 		ev.events = EPOLLIN;
 		ev.data.fd = server_fd;
+		
+		std::cout << "server_fd: " << server_fd << std::endl;
 		if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
 			perror("[ERROR] Failed to register server socket with epoll");
 			close(server_fd);
 			close(epoll_fd);
 			exit(EXIT_FAILURE);
 		}
-		std::cout << "[INFO] Server socket registered with epoll, waiting for events..." << std::endl;
+		std::cout << "[INFO] Server socket registered with epoll." << std::endl;
+
+		while (true)
+			event_loop(events);
+	}
+
+	void event_loop(struct epoll_event events[])
+	{
+		
 		while (true) {
+			std::cout << "[INFO] Waiting for events (" <<  _port << ")..." << std::endl;
 			int nfds = epoll_wait(epoll_fd, events, _max_clients, -1);
 			if (nfds == -1) {
 				perror("[ERROR] epoll_wait failed");
@@ -303,9 +342,10 @@ public:
 				close(epoll_fd);
 				exit(EXIT_FAILURE);
 			}
-			std::cout << "[INFO] Number of events received: " << nfds << std::endl;
-
+			std::cout << "[INFO] Number of events received(" <<  _port << "): " << nfds << std::endl;
+			
 			for (int i = 0; i < nfds; ++i) {
+				//TODO: comprobar error control antes que todo
 				if (events[i].data.fd == server_fd) {
 					std::cout << "[INFO] New incoming connection detected" << std::endl;
 					if (accept_connections()) {
@@ -313,19 +353,39 @@ public:
 					} else {
 						std::cerr << "[WARNING] Failed to accept connection" << std::endl;
 					}
-				} else {
-					std::cout << "[INFO] Handling client with FD: " << events[i].data.fd << std::endl;
+				}
+				else if ((events[i].events & EPOLLERR) || 
+                        (events[i].events & EPOLLHUP)) {
+					
+					std::cout << "[ERROR] Failed event "  << std::endl;
+					// Client connection closed 
+					close(events[i].data.fd);
+				} 
+				else if ((events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
+				{
+					std::cout << "[INFO] Handling output client with FD: " << events[i].data.fd << std::endl;
+					handle_output_client(events[i].data.fd);
+				}
+				else if ((events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
+				{
+					std::cout << "[INFO] Handling input client with FD: " << events[i].data.fd << std::endl;
 					if (handle_client(events[i].data.fd) < 0) {
 						std::cerr << "[WARNING] Error handling client with FD: " << events[i].data.fd << std::endl;
 						// Cerrar el FD problemático si es necesario
 						close(events[i].data.fd);
 					}
+					break ;
+				}
+				else
+				{
+					std::cerr << "[ERROR] epoll error" << std::endl;
 				}
 			}
 		}
 	}
 
 	void stop() {
+		_env_len = 0;//TODO: borrar linea
 		close(server_fd);
 		close(epoll_fd);
 	}
