@@ -1,12 +1,10 @@
 #ifndef PARSERSERVER_HPP
 #define PARSERSERVER_HPP
 #include "Server.hpp"
-#include "utils/split.hpp"
-#include "utils/readFileName.hpp"
 #include <string>
 #include <deque>
 #include <vector>
-#include "utils/extractStrBetween.hpp"
+#include "utils/Utils.hpp"
 class ParserServer {
 	private:
 		const char *_file_name;
@@ -111,6 +109,18 @@ class ParserServer {
 		ParserServer(const char *file_name = "ws.conf"):
 		_file_name(file_name),
 		_content_file(readFileName(_file_name)) {}
+
+		int dumpRawData(const char *file_name)
+		{
+			_file_name = file_name;
+			try {
+				_content_file = readFileName(_file_name);
+			} catch (const std::exception&  e) {
+				std::cerr << e.what() << std::endl;
+				return 0;
+			}
+			return 1;
+		}
 		/**
 		 * @brief Busco en el archivo la configuracion necesaria para Server
 		 */

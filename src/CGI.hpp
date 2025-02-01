@@ -1,9 +1,9 @@
 #ifndef CGI_HPP
 #define CGI_HPP
+
 #include <string>
-#include "utils/endsWith.hpp"
 #include <sys/wait.h>
-#include "utils/readFd.hpp"
+#include "utils/Utils.hpp"
 
 
 /**

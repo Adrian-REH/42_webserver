@@ -1,7 +1,4 @@
-#ifndef EXTRACTSTRBERWEEN_HPP
-#define EXTRACTSTRBERWEEN_HPP
-#include <string>
-#include <stdexcept>
+#include "Utils.hpp"
 
 // TODO: Extract function to hpp cpp
 std::string extractStrBetween(const std::string& line, const std::string& init, const std::string& end) {
@@ -28,4 +25,3 @@ std::string extractStrEnd(const std::string& line, const std::string& init) {
 
     return line.substr(startPos, line.length());
 }
-#endif

@@ -1,9 +1,10 @@
-#include <string>
+#ifndef CLIENT_HPP
+#define CLIENT_HPP
+
 #include <cstring>
-#include <iostream>
 #include <unistd.h>
 #include <sys/epoll.h>
-#include <cstdlib>
+#include "utils/Utils.hpp"
 #include "Request.hpp"
 
 /**
@@ -111,3 +112,5 @@ public:
 		close(_socket_fd);
 	}
 };
+
+#endif

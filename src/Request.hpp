@@ -1,27 +1,9 @@
-#ifndef REQUEST_HTPP
-#define REQUEST_HTPP
-#include <string>
+#ifndef REQUEST_HPP
+#define REQUEST_HPP
 #include <map>
-#include <deque>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include "utils/split.hpp"
+#include "utils/Utils.hpp"
 
 const std::string CONTENT_LENGTH = "Content-Length";
-
-/**
- * @brief Convierte un valor entero a una cadena de texto.
- * 
- * @param value El valor entero a convertir.
- * @return std::string Representación en cadena del entero.
- */
-std::string to_string(int value) {
-    std::ostringstream oss;
-    oss << value;
-    return oss.str();
-}
-
 
 /**
  * @class Request

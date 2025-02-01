@@ -1,6 +1,4 @@
-#ifndef READFD_HPP
-#define READFD_HPP
-#include <string>
+#include "Utils.hpp"
 
 std::string readFd(int fd) {
 	std::string result;
@@ -12,5 +10,3 @@ std::string readFd(int fd) {
 	}
 	return result;
 }
-
-#endif

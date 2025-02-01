@@ -20,18 +20,24 @@ int main(int argc, char **argv, char **env) {
 	ParserServer parserSrv;
 	size_t n_server;
 
-	if (argc < 2 || argc > 2)
-		std::cerr << "[ERROR] Wrong number of arguments " << argv[0] << std::endl;
+	if (argc > 2)
+	{
+		std::cerr << "[ERROR] Wrong number of arguments: " << argv[0] << " configuration_filename" << std::endl;
+		return 1;
+	}
+	else if (argc == 2 && !parserSrv.dumpRawData(argv[1]))
+		return 1;
 
 	std::vector<Server> srvs =  parserSrv.execute(env);
 	std::vector<Server>::iterator it;
 
 	n_server = srvs.size();
-	pid_t *pid = (pid_t *)malloc(sizeof(pid_t) * n_server);
+	pid_t *pid = new pid_t[n_server];
 	for (size_t i = 0; i < n_server; i ++) {
 		pid[i] = create_server(srvs[i]);
 	}
 	for (size_t i = 0; i < n_server; i ++) {
 		waitpid(pid[i], NULL, 0);
 	}
+	delete []pid;
 }

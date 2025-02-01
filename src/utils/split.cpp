@@ -1,10 +1,4 @@
-#ifndef SPLIT_HPP
-#define SPLIT_HPP
-#include <deque>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
+#include "Utils.hpp"
 
 /**
  * @brief Divide una cadena en partes utilizando un delimitador.
@@ -23,4 +17,3 @@ std::deque<std::string> split(const std::string &str, char delimiter) {
 	return result;
 }
 
-#endif

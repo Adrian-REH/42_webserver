@@ -1,17 +1,12 @@
-#ifndef READFILENAME_HPP
-#define READFILENAME_HPP
-#include <deque>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <cstdlib>
+
+#include "Utils.hpp"
+
 
 std::deque<std::string> readFileName(const char *_filename)
 {
 	std::deque<std::string>		content;
 	std::string					line;
-	std::map<std::string, int>	exchange;
+	//std::map<std::string, int>	exchange;
 	std::ifstream				inFile(_filename);
 
 	if (!inFile)
@@ -21,5 +16,3 @@ std::deque<std::string> readFileName(const char *_filename)
 	inFile.close();
 	return content;
 }
-
-#endif

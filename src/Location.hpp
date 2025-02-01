@@ -1,33 +1,8 @@
 #ifndef LOCATION_HPP
 #define LOCATION_HPP
-#include <string>
-#include <vector>
-#include "LimitExcept.hpp"
 
-//TODO: extract method to hpp cpp
-std::vector<std::string> get_all_dirs(const char *dir_path ) {
-	std::vector<std::string> dirs;
-	// Abrir el directorio
-	DIR* dir = opendir(dir_path);
-	if (dir == NULL) {
-		std::cerr << "Error al abrir el directorio" << std::endl;
-		return dirs;
-	}
-	
-	// Leer entradas del directorio
-	struct dirent* entry;
-	while ((entry = readdir(dir)) != NULL) {
-		// Ignorar las entradas "." y ".."
-		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-			std::string d_name(entry->d_name);
-			dirs.push_back(d_name);
-		}
-	}
-	
-	// Cerrar el directorio
-	closedir(dir);
-	return dirs;
-}
+#include "utils/Utils.hpp"
+#include "LimitExcept.hpp"
 
 class Location {
 	private:
@@ -164,6 +139,7 @@ class Location {
 			_files = (get_all_dirs(_root_directory.c_str() + 1)); // Adjust for directories without leading '/'
 			return *this;
 		}
+		
 		// Helper function to build the full path.
 		std::string buildFullPath(const std::string &root, const std::string &filename) {
 			std::string result;

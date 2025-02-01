@@ -1,6 +1,5 @@
-#ifndef STARTSWITH_HPP
-#define STARTSWITH_HPP
-#include <string>
+#include "Utils.hpp"
+
 
 /**
  * @brief Verifica si una cadena comienza con un prefijo específico.
@@ -16,4 +15,3 @@ bool starts_with(const std::string& str, const std::string& prefix) {
     }
     return str.compare(0, prefix.size(), prefix) == 0;
 }
-#endif

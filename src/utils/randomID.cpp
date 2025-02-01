@@ -1,11 +1,4 @@
-#ifndef RANDOMID_HPP
-#define RANDOMID_HPP
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-#include <sstream>
-#include <string>
-
+#include "Utils.hpp"
 // Función para generar un número aleatorio en el rango [min, max]
 int randomInRange(int min, int max) {
     return std::rand() % (max - min + 1) + min;
@@ -27,4 +20,3 @@ std::string generateSessionID(int length) {
     return sessionID;
 }
 
-#endif

@@ -1,6 +1,4 @@
-#ifndef ENDSWITH_HPP
-#define ENDSWITH_HPP
-#include <string>
+#include "Utils.hpp"
 
 /**
  * @brief Verifica si una cadena termina con un sufijo específico.
@@ -16,4 +14,3 @@ bool ends_with(const std::string& str, const std::string& suffix) {
     }
     return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
-#endif
