@@ -26,13 +26,10 @@ public:
 				  << std::setw(2) << std::setfill('0') << now->tm_sec << "."
 				  << std::setw(3) << std::setfill('0') << (tv.tv_usec / 1000) << " ";
 
-		// Obtener el PID y nombre de hilo (simulación de hilo)
 		logStream << getpid() << " --- [main] ";
 
-		// Nivel de log
 		logStream << std::setw(5) << std::left << logLevelToString(level) << " ";
 
-		// Módulo y mensaje
 		logStream << module << " : " << message;
 
 		std::cout << logStream.str() << std::endl;

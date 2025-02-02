@@ -66,7 +66,7 @@ void HttpServerManager::handle_epoll()
 		}
 		
 		for (int i = 0; i < nfds; ++i) {
-		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + nfds);
+		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds));
 			//TODO: comprobar error control antes que todo
 			std::map<int, Server>::iterator it = _sock_srvs.find(events[i].data.fd); 
 			if (it != _sock_srvs.end()) {
@@ -84,34 +84,34 @@ void HttpServerManager::handle_epoll()
 			}
 			else if ((events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
 			{
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling output client with FD: " + events[i].data.fd);
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling output client with FD: " + to_string(events[i].data.fd));
 				if (_cli_srvs[events[i].data.fd].handle_output_client(events[i].data.fd) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling output client with FD: " + events[i].data.fd);
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling output client with FD: " + to_string(events[i].data.fd));
 					close(events[i].data.fd);
 					_cli_srvs.erase(events[i].data.fd);
 				}
 				if (set_event_action(events[i].data.fd, EPOLLIN) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + events[i].data.fd);
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(events[i].data.fd));
 					close(events[i].data.fd);
 					_cli_srvs.erase(events[i].data.fd);
 				}
 			}
 			else if ((events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
 			{
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client with FD: " + events[i].data.fd);
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client with FD: " + to_string(events[i].data.fd));
 				if (_cli_srvs[events[i].data.fd].handle_input_client(events[i].data.fd) < 0) {
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + events[i].data.fd);
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + to_string(events[i].data.fd));
 					close(events[i].data.fd);
 					_cli_srvs.erase(events[i].data.fd);
 				}
 				if (set_event_action(events[i].data.fd, EPOLLOUT) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + events[i].data.fd);
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(events[i].data.fd));
 					close(events[i].data.fd);
 					_cli_srvs.erase(events[i].data.fd);
 				}
 			}
 			else{
-				std::cerr << "[ERROR] epoll error" << std::endl;
+				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll error.");
 				return ;
 			}
 		}
@@ -126,7 +126,7 @@ int HttpServerManager::create_socket_fd(int port) {
 		perror("Error al crear el socket");
 		return (-1);
 	}
-	Logger::log(Logger::INFO,"HttpServerManager.cpp", "Created socket_fd: " + socket_fd);
+	Logger::log(Logger::INFO,"HttpServerManager.cpp", "Created socket_fd: " + to_string(socket_fd));
 
 	setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 	fcntl(socket_fd, F_SETFL, O_NONBLOCK);
@@ -135,12 +135,12 @@ int HttpServerManager::create_socket_fd(int port) {
 	addr.sin_port = htons(port);
 
 	if (bind(socket_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Fail to bind socket_fd: " + socket_fd);
+		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Fail to bind socket_fd: " + to_string(socket_fd));
 		close(socket_fd);
 		return (-1);
 	}
 	if (listen(socket_fd, MAX_CLIENTS) < 0) {
-		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Fail to listen socket_fd: " + socket_fd);
+		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Fail to listen socket_fd: " + to_string(socket_fd));
 		close(socket_fd);
 		return (-1);
 	}
