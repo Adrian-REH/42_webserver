@@ -70,12 +70,12 @@ public:
 		char buffer[1024];
 		int bytes_received = recv(_socket_fd, buffer, sizeof(buffer), 0);
 		if (bytes_received > 0) {
-			std::cout << "Parser Request "<< std::endl;
+			Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
 			_request.parse_request(buffer, bytes_received);
 			return 0;
 		} else {
 			// Cliente desconectado
-			std::cout << "Cliente desconectado, socket fd: " << _socket_fd << "\n";
+			Logger::log(Logger::ERROR, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
 			return -1;
 		}
 	}
@@ -90,7 +90,7 @@ public:
 	 */
 	void send_response(std::string &response) {
 		if (!response.empty()) {
-			std::cout << response.substr(0, response.find("\n")) << std::endl;
+			Logger::log(Logger::INFO, "Client.cpp", response.substr(0, response.find("\n")));
 			send(_socket_fd, response.c_str(), response.size(), 0);
 		close(_socket_fd);
 		}
