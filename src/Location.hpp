@@ -123,6 +123,12 @@ class Location {
 		std::string get_path() const {
 			return _path;
 		}
+		int get_auto_index() const {
+			return _auto_index;
+		}
+		std::vector<std::string> get_files() const {
+			return _files;
+		}
 		/**
 		 * @brief Finalize the configuration and build the Location object.
 		 * 
@@ -136,16 +142,18 @@ class Location {
 			if (_root_directory.empty())
 			//FIXME: En caso de que no haya literalmente un root_dir es necesario que sea resiliente asi que propongo poner "/"
 				throw std::runtime_error("Error: no existe un directorio root");
-			_files = (get_all_dirs(_root_directory.c_str() + 1)); // Adjust for directories without leading '/'
 			return *this;
 		}
 		
 		// Helper function to build the full path.
-		std::string buildFullPath(const std::string &root, const std::string &filename) {
+		std::string buildFullPath(const std::string &root,const std::string path, const std::string &filename) {
 			std::string result;
 			if (!starts_with(root, "/"))
 				result = "/";
 			result.append(root);
+			if (!ends_with(result, "/"))
+				result.append("/");
+			result.append(path);
 			if (!ends_with(result, "/"))
 				result.append("/");
 			result.append(filename);
@@ -162,40 +170,35 @@ class Location {
 		 * @return The full path to the script if successfully resolved.
 		 * @throws std::runtime_error If no matching file is found.
 		 */
-		std::string findScriptPath(const std::string &path) {
-   
+		std::string findScriptPath(const std::string &url_path) {
+			std::string path = extractStrEnd(url_path, _path);
+			std::string file;
 			// Case 1: Path ends with the configured index file.
-			if (ends_with(path, _index)) {
-				return path;
+			if (!_index.empty() && ends_with(path, _index))
+				return buildFullPath(_root_directory, "", path);
+			// Check for a matching file in _files.
+			size_t dot_pos = path.rfind('.');
+			if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)){
+				std::string path_tmp = extractStrStart(path, "/");
+				file = extractStrStart(path, path_tmp);
+				path = path_tmp;
 			}
+			std::string work_dir = buildFullPath(_root_directory, path, "");
 
-			// Case 2: Path exactly matches the configured location path (_path).
-			if (path == _path) {
-				return buildFullPath(_root_directory, _index);
+			std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"'"<< std::endl;
+			if (work_dir == "/")
+				work_dir = ".";
+			const char * dir = work_dir.c_str();
+			if (work_dir.length() > 1)
+				dir++;
+			_files = get_all_dirs(dir); // Adjust for directories without leading '/'
+			for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
+				if (!file.empty() && ends_with(file, *it)) {
+					return buildFullPath(_root_directory, path, *it);
+				} else if (*it == _index)
+					return buildFullPath(_root_directory, path, _index);
 			}
-
-			// Case 3: Path starts with _path or vice versa (_path starts with path).
-			if (starts_with(path, _path) || starts_with(_path, path)) {
-				
-				// Handle case where path matches _path with a trailing slash.
-				std::string adjustedPath = path + "/";
-				if (adjustedPath == _path) {
-					return buildFullPath(_root_directory, _index);
-				}
-
-				// Check for a matching file in _files.
-				for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
-					if (ends_with(path, *it)) {
-						return buildFullPath(_root_directory, *it);
-					}
-				}
-
-				// Throw error if no matching file is found.
-				throw std::runtime_error("Not found file, by path indicated in start line");
-			}
-
-			// Default case: Return an empty string if no conditions are met.
-			return "";
+			return buildFullPath(_root_directory, path, "");
 		}
 
 };
