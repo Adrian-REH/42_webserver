@@ -1,5 +1,5 @@
 #include "Server.hpp"
-#include "Loggin.hpp"
+#include "Logger.hpp"
 
 Server::Server(int port, int max_clients) : _port(port), _max_clients(max_clients), _env_len(0){
 }

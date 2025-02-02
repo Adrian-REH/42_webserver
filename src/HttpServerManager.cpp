@@ -2,7 +2,7 @@
 #include <list>
 #define MAX_CLIENTS 30
 #include "HttpServerManager.hpp"
-#include "Loggin.hpp"
+#include "Logger.hpp"
 
 HttpServerManager::HttpServerManager() {}
 
