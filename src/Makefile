@@ -15,7 +15,7 @@ CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3
 COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = -I. -Iutils
-SRCS = main.cpp Server.cpp \
+SRCS = main.cpp Server.cpp HttpServerManager.cpp \
 	   utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
 	   utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
 	   utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp
