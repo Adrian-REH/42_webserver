@@ -91,7 +91,8 @@ class ParserServer {
 				} else {
 					if (line.find("listen ") != std::string::npos && line.find(";") != std::string::npos) {
 						char *endp;
-						srv.set_port(static_cast<const int>(strtod(extractStrBetween(line, "listen ", ";").c_str(), &endp)));
+						std::string port = extractStrBetween(line, "listen ", ";");
+						srv.set_port(static_cast<int>(std::strtod(port.c_str(), &endp)));
 						continue ;
 					}
 					if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
