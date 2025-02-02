@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Loggin.hpp"
 
 Server::Server(int port, int max_clients) : _port(port), _max_clients(max_clients), _env_len(0){
 }
@@ -57,7 +58,7 @@ int Server::handle_input_client(int client_fd) {
 	if (_clients.find(client_fd) != _clients.end())
 		client = _clients[client_fd];
 	else {
-		std::cerr << "[ERROR] Client for FD " << client_fd << " doesn't exist."<< std::endl;
+		Logger::log(Logger::ERROR,"Server.cpp", "Client for FD" + to_string(client_fd) + " doesn't exist.");
 		return -1;
 	}
 	if (client->receive_data() < 0)
@@ -67,12 +68,12 @@ int Server::handle_input_client(int client_fd) {
 
 int Server::handle_output_client(int client_fd) {
 	Client* client = _clients[client_fd];
-	std::cout << "[INFO] Executing client request for FD: " << client_fd << std::endl;
+	Logger::log(Logger::INFO,"Server.cpp", "Executing read request for client_fd: " + to_string(client_fd));
 	try {
 		execute(*client);
 
 	} catch (std::exception &e) {
-		std::cerr << e.what() << std::endl;
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
 	}
 	return 0;
 }
@@ -134,14 +135,10 @@ void Server::execute(Client &client) {
 	std::string method = req.get_method();    // Método para obtener el método HTTP
 	std::string body = req.get_body();        // Método para obtener el cuerpo del request
 	try {
-		std::cout << "[INFO] Starting CGI execution" << std::endl;
+		Logger::log(Logger::INFO,"Server.cpp", "Starting CGI execution.");
 		std::string rs;
 		std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
-
-		std::cout << "[DETAIL] Request details: "
-				<< "method = " << method 
-				<< ", path = " << path 
-				<< ", body size = " << body.size() << " bytes" << std::endl;
+		Logger::log(Logger::DEBUG,"Server.cpp", "Request details: method:  " + method + ", path: " + path + ", body size: " + to_string(body.size()) + "bytes");
 		std::vector<Location>::iterator it;
 		std::map<std::string, Location>::iterator it_map;
 		//TODO: Verificar y hacer un algoritmo para manejar los distintos Locations y no ejecutar de mas findScriptPath
@@ -152,17 +149,16 @@ void Server::execute(Client &client) {
 		for (it = _locations.begin(); it != _locations.end(); it++) {
 			std::cout << path << " " << it->get_path() << std::endl;
 			if (starts_with(path, it->get_path())) {
-				std::cout << "[INFO] Checking location: " << it->get_path() << std::endl;
+				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());
 				std::string path_tmp = it->findScriptPath(path);
 				size_t dot_pos = path_tmp.rfind('.');
 				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
-					std::cout << "[INFO] Matching script found: " << path_tmp << std::endl;
+					Logger::log(Logger::INFO,"Server.cpp", "Matching script found: " + path_tmp);
 					path = path_tmp;
 					break ;
 				}else if (it->get_auto_index()) {
 					rs = generate_index_html(it->get_files(), path_tmp);
 					rs_start_line.append(rs);
-					std::cout << "[INFO] AUTO-INDEX: Sending response to client. Response size: "<< rs_start_line << rs_start_line.size() << " bytes" << std::endl;
 					client.send_response(rs_start_line);
 					return ;
 				}
@@ -175,7 +171,7 @@ void Server::execute(Client &client) {
 
 		//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
 		std::string cookie_val = req.get_header_by_key("Cookie");
-		std::cout << "[INFO] Verifing Cookie: " << cookie_val << std::endl;
+		Logger::log(Logger::INFO,"Server.cpp", "Verifing Cookie: " + cookie_val);
 		Cookie cookie = handle_cookie_session(cookie_val);
 		//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
 
@@ -184,7 +180,7 @@ void Server::execute(Client &client) {
 			(char*)http_cookie.c_str(),
 			NULL
 		};
-		std::cout << "[INFO] Executing script: " << path << std::endl;
+		Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
 		//Gestiono la respuesta de la ejecucion del CGI
 		rs = CGI(path, method, body, env).execute();
 		// Agrego Set-cookie en caso de que lo requiera
@@ -194,15 +190,14 @@ void Server::execute(Client &client) {
 				_cookies.push_back(cookie);
 		}
 		rs_start_line.append(rs);
-		std::cout << "[INFO] Sending response to client. Response size: " << rs_start_line.size() << " bytes" << std::endl;
+		Logger::log(Logger::INFO,"Server.cpp", "Sending response to client. Response size: " + to_string(rs_start_line.size()) + "bytes");
 		client.send_response(rs_start_line);
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "[ERROR] CGI execution failed: " << e.what() << std::endl;
-		std::cerr << "[ERROR] Request details: path = " << path 
-				<< ", method = " << method 
-				<< ", body size = " << body.size() << " bytes" << std::endl;
+		Logger::log(Logger::WARN,"Server.cpp", "CGI execution failed");
+		Logger::log(Logger::WARN, "Server.cpp", e.what());
+		Logger::log(Logger::WARN, "Server.cpp", "Request details: path: " + path +", method: " + method + ", body size: " + to_string(body.size()) + "bytes");
 		client.send_error(500, "Internal Server Error");
 	}
 }
