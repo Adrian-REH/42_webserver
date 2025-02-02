@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-Server::Server(int port, int opt, int max_clients) : _port(port), _opt(opt), _max_clients(max_clients), _env_len(0){
+Server::Server(int port, int max_clients) : _port(port), _max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const int &port) {
@@ -8,6 +8,10 @@ Server &Server::set_port(const int &port) {
 	return *this;
 }
 
+Server &Server::setSocketFd(const int &sock_fd) {
+	_socket_fd = sock_fd;
+	return *this;
+}
 Server &Server::set_server_name(const std::string &server_name) {
 	_server_name = server_name;
 	return *this;
@@ -17,120 +21,19 @@ Server &Server::addLocation(const Location &location) {
 	_locations.push_back(location);
 	return *this;
 }
-
-void Server::init() {
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_fd == -1) {
-		perror("Error al crear el socket");
-		exit(EXIT_FAILURE);
-	}
-
-	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &_opt, sizeof(_opt));
-
-	fcntl(server_fd, F_SETFL, O_NONBLOCK);
-
-	_address.sin_family = AF_INET;
-	_address.sin_addr.s_addr = INADDR_ANY;
-	_address.sin_port = htons(_port);
-
-	if (bind(server_fd, (struct sockaddr *)&_address, sizeof(_address)) < 0) {
-		perror("Error al hacer bind");
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
-	if (listen(server_fd, _max_clients) < 0) {
-		perror("Error al hacer listen");
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
-	std::cout << "Listen from: " << "INADDR_ANY" << ":" << _port << std::endl;
-	epoll_fd = epoll_create1(0);
-	if (epoll_fd == -1) {
-		perror("Error al crear epoll");
-		close(server_fd);
-		exit(EXIT_FAILURE);
-	}
-	std::cout << "Max-Clients: " << _max_clients << std::endl;
+Server &Server::addClient(const Client &cli) {
+	_clients[cli.get_socket_fd()] = new Client(cli);
+	return *this;
+}
+int Server::getSocketFd() const{
+	return _socket_fd;
+}
+int Server::getPort() const{
+	return _port;
 }
 
-void Server::start() {
-	struct epoll_event events[_max_clients];
-	
 
-	ev.events = EPOLLIN;
-	ev.data.fd = server_fd;
-	
-	std::cout << "server_fd: " << server_fd << std::endl;
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &ev) == -1) {
-		perror("[ERROR] Failed to register server socket with epoll");
-		close(server_fd);
-		close(epoll_fd);
-		exit(EXIT_FAILURE);
-	}
-	std::cout << "[INFO] Server socket registered with epoll." << std::endl;
 
-	while (true)
-		event_loop(events);
-}
-
-void Server::event_loop(struct epoll_event events[])
-{
-	
-	while (true) {
-		std::cout << "[INFO] Waiting for events (" <<  _port << ")..." << std::endl;
-		int nfds = epoll_wait(epoll_fd, events, _max_clients, -1);
-		if (nfds == -1) {
-			perror("[ERROR] epoll_wait failed");
-			close(server_fd);
-			close(epoll_fd);
-			exit(EXIT_FAILURE);
-		}
-		std::cout << "[INFO] Number of events received(" <<  _port << "): " << nfds << std::endl;
-		
-		for (int i = 0; i < nfds; ++i) {
-			//TODO: comprobar error control antes que todo
-			if (events[i].data.fd == server_fd) {
-				std::cout << "[INFO] New incoming connection detected" << std::endl;
-				if (accept_connections()) {
-					std::cout << "[INFO] Connection accepted successfully" << std::endl;
-				} else {
-					std::cerr << "[WARNING] Failed to accept connection" << std::endl;
-				}
-			}
-			else if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
-				
-				std::cout << "[ERROR] Failed event "  << std::endl;
-				// Client connection closed 
-				close(events[i].data.fd);
-			} 
-			else if ((events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
-			{
-				std::cout << "[INFO] Handling output client with FD: " << events[i].data.fd << std::endl;
-				handle_output_client(events[i].data.fd);
-			}
-			else if ((events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
-			{ 
-				std::cout << "[INFO] Handling input client with FD: " << events[i].data.fd << std::endl;
-				if (handle_input_client(events[i].data.fd) < 0) {
-					std::cerr << "[WARNING] Error handling client with FD: " << events[i].data.fd << std::endl;
-					// Cerrar el FD problemático si es necesario
-					close(events[i].data.fd);
-				}
-				break ;
-			}
-			else
-			{
-				std::cerr << "[ERROR] epoll error" << std::endl;
-			}
-		}
-	}
-}
-
-void Server::stop() {
-	_env_len = 0;//TODO: borrar linea
-	close(server_fd);
-	close(epoll_fd);
-}
 
 
 Cookie Server::validate_session_id(std::string &session_id) {
@@ -145,31 +48,9 @@ Cookie Server::validate_session_id(std::string &session_id) {
 	return Cookie();
 }
 	
-bool Server::accept_connections() {
-	struct sockaddr_in client_address;
-	socklen_t client_len = sizeof(client_address);
-	int client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_len);
-	if (client_fd == -1) {
-		perror("Error al aceptar la conexión");
-		return 0;
-	}
-	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
-	ev.events = EPOLLIN | EPOLLET;
-	ev.data.fd = client_fd;
-	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
 
-	Client* new_client = new Client(client_fd);
-	_clients[client_fd] = new_client;
-	return 1;
-}
 
-void Server::set_event_action(int client_fd, uint32_t action)
-{
-	ev.events = action | EPOLLET;
-	ev.data.fd = client_fd;
-	epoll_ctl(epoll_fd, EPOLL_CTL_MOD, client_fd, &ev);
-}
 
 int Server::handle_input_client(int client_fd) {
 	Client* client;
@@ -181,16 +62,18 @@ int Server::handle_input_client(int client_fd) {
 	}
 	if (client->receive_data() < 0)
 		return -1;
-	//client->get_request().display_header();
-	set_event_action(client_fd, EPOLLOUT);
 	return 0;
 }
 
 int Server::handle_output_client(int client_fd) {
 	Client* client = _clients[client_fd];
 	std::cout << "[INFO] Executing client request for FD: " << client_fd << std::endl;
-	execute(*client);
-	set_event_action(client_fd, EPOLLIN);
+	try {
+		execute(*client);
+
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+	}
 	return 0;
 }
 

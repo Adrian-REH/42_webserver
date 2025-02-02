@@ -20,8 +20,6 @@
 #include "utils/Utils.hpp"
 
 
-#pragma region Cookie
-
 class Cookie {
 private:
     std::string _session_id;
@@ -72,9 +70,8 @@ public:
 	}
 };
 
-#pragma endregion 
 
-#pragma region Server
+
 class Server {
 
 private:
@@ -83,34 +80,27 @@ private:
 	std::string _server_name;
 	std::map<int, Client*> _clients;
 	std::vector<Location> _locations;
-	int server_fd;
+	int _socket_fd;
 	int epoll_fd;
-	struct sockaddr_in _address;
-	int _opt;
 	int _max_clients;
 	size_t _env_len;
-
-	struct epoll_event ev;
 	
 	Cookie validate_session_id(std::string &session_id);
-	bool accept_connections();
-	void set_event_action(int client_fd, uint32_t action);
-	int handle_input_client(int client_fd);
-	int handle_output_client(int client_fd);
 	Cookie handle_cookie_session(std::string cookieHeader);
 	void execute(Client &client);
 
 public:
-	Server(int port = 8080, int opt = 1, int max_clients = 10 );
+	int handle_input_client(int client_fd);
+	int handle_output_client(int client_fd);
+	Server(int port = 8080, int max_clients = 10 );
 	Server &set_port(const int &port);
+	Server &setSocketFd(const int &sock_fd);
 	Server &set_server_name(const std::string &server_name);
 	Server &addLocation(const Location &location);
-	
-	void init();
-	void start();
-	void event_loop(struct epoll_event events[]);
-	void stop();
+	Server &addClient(const Client &cli);
+	int getSocketFd() const;
+	int getPort() const;
+
 };
-#pragma endregion
 
 #endif
