@@ -18,6 +18,7 @@
 bool						ends_with(const std::string& str, const std::string& suffix);
 std::string					extractStrBetween(const std::string& line, const std::string& init, const std::string& end);
 std::string					extractStrEnd(const std::string& line, const std::string& init);
+std::string					extractStrStart(const std::string& line, const std::string& end);
 int							randomInRange(int min, int max);
 std::string					generateSessionID(int length);
 std::string					readFd(int fd);

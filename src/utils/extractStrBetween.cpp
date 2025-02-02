@@ -25,3 +25,13 @@ std::string extractStrEnd(const std::string& line, const std::string& init) {
 
     return line.substr(startPos, line.length());
 }
+
+
+std::string extractStrStart(const std::string& line, const std::string& end) {
+    size_t endPos = line.rfind(end);
+    if (endPos == std::string::npos) {
+        throw std::invalid_argument("Start delimiter not found in line");
+    }
+
+    return line.substr(0, endPos);
+}
