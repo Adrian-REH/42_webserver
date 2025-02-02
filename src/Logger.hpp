@@ -46,12 +46,3 @@ private:
 		return "UNKNOWN";
 	}
 };
-/* 
-// Ejemplo de uso
-int main() {
-	Logger::log(Logger::INFO, "my.module.Class", "Application started successfully");
-	Logger::log(Logger::ERROR, "my.module.Class", "An error occurred");
-	Logger::log(Logger::DEBUG, "my.module.Class", "Debugging application");
-	return 0;
-}
- */
