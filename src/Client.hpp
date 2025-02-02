@@ -76,7 +76,6 @@ public:
 		} else {
 			// Cliente desconectado
 			std::cout << "Cliente desconectado, socket fd: " << _socket_fd << "\n";
-			close(_socket_fd);
 			return -1;
 		}
 	}
