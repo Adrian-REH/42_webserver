@@ -95,6 +95,38 @@ Cookie Server::handle_cookie_session(std::string cookieHeader) {
 	sessionID = generateSessionID(16); // No se encontró el session_id, generar uno nuevo
 	return (Cookie(sessionID, "invalid"));
 }
+std::string generate_index_html(std::vector<std::string> files, std::string dir_path) {
+   std::string index_file;
+
+    // Escribir el encabezado HTML
+	index_file = "Content-Type: text/html\r\n\r\n";
+    index_file.append("<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<title>Index of ");
+	index_file.append(dir_path);
+	index_file.append("</title>\n</head>\n<body>\n");
+    index_file.append( "<h1>Index of ");
+	index_file.append(dir_path);
+	index_file.append("</h1>\n<ul>\n");
+
+    // Leer los archivos y directorios
+	std::vector<std::string>::iterator it;
+    for (it = files.begin(); it != files.end(); it ++) {
+        std::string entry_name = *it;
+        // Ignorar los directorios "." y ".."
+        if (entry_name == "." || entry_name == "..") {
+            continue;
+        }
+        // Escribir cada archivo/directorio en la lista HTML
+        index_file.append( "<li><a href=\"");
+		index_file.append(entry_name);
+		index_file.append("\">");
+		index_file.append(entry_name);
+		index_file.append("</a></li>\n");
+    }
+
+    // Escribir el pie de página HTML
+    index_file.append("</ul>\n</body>\n</html>\n");
+	return index_file;
+}
 
 void Server::execute(Client &client) {
 	Request req = client.get_request();
@@ -103,32 +135,43 @@ void Server::execute(Client &client) {
 	std::string body = req.get_body();        // Método para obtener el cuerpo del request
 	try {
 		std::cout << "[INFO] Starting CGI execution" << std::endl;
+		std::string rs;
+		std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
+
 		std::cout << "[DETAIL] Request details: "
 				<< "method = " << method 
 				<< ", path = " << path 
 				<< ", body size = " << body.size() << " bytes" << std::endl;
 		std::vector<Location>::iterator it;
-
+		std::map<std::string, Location>::iterator it_map;
 		//TODO: Verificar y hacer un algoritmo para manejar los distintos Locations y no ejecutar de mas findScriptPath
 		/* Define a directory or a file from where the file should be searched (for example,
 			if url /kapouet is rooted to /tmp/www, url /kapouet/pouic/toto/pouet is
 			/tmp/www/pouic/toto/pouet).
 		*/
 		for (it = _locations.begin(); it != _locations.end(); it++) {
-			std::cout << "[INFO] Checking location: " << it->get_path() << std::endl;
-			path = it->findScriptPath(path);
-
-			if (!path.empty()) {
-				std::cout << "[INFO] Matching script found: " << path << std::endl;
-				break;
+			std::cout << path << " " << it->get_path() << std::endl;
+			if (starts_with(path, it->get_path())) {
+				std::cout << "[INFO] Checking location: " << it->get_path() << std::endl;
+				std::string path_tmp = it->findScriptPath(path);
+				size_t dot_pos = path_tmp.rfind('.');
+				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
+					std::cout << "[INFO] Matching script found: " << path_tmp << std::endl;
+					path = path_tmp;
+					break ;
+				}else if (it->get_auto_index()) {
+					rs = generate_index_html(it->get_files(), path_tmp);
+					rs_start_line.append(rs);
+					std::cout << "[INFO] AUTO-INDEX: Sending response to client. Response size: "<< rs_start_line << rs_start_line.size() << " bytes" << std::endl;
+					client.send_response(rs_start_line);
+					return ;
+				}
+				else {
+					throw std::runtime_error("No script found for the given path");
+				}
 			}
 		}
-		if (path.empty()) {
-			throw std::runtime_error("No script found for the given path");
-		}
 
-		std::string rs;
-		std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
 
 		//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
 		std::string cookie_val = req.get_header_by_key("Cookie");
@@ -144,13 +187,14 @@ void Server::execute(Client &client) {
 		std::cout << "[INFO] Executing script: " << path << std::endl;
 		//Gestiono la respuesta de la ejecucion del CGI
 		rs = CGI(path, method, body, env).execute();
+		// Agrego Set-cookie en caso de que lo requiera
 		if (rs.find("Set-Cookie: session_id=") != std::string::npos){
 			cookie.set_session("valid");
 			if (!cookie.empty())
 				_cookies.push_back(cookie);
 		}
 		rs_start_line.append(rs);
-		std::cout << "[INFO] Sending response to client. Response size: "<< rs_start_line << " " << rs_start_line.size() << " bytes" << std::endl;
+		std::cout << "[INFO] Sending response to client. Response size: " << rs_start_line.size() << " bytes" << std::endl;
 		client.send_response(rs_start_line);
 	}
 	catch (const std::exception& e)
