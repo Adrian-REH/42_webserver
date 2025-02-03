@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 #include "utils/Utils.hpp"
 #include "Request.hpp"
+#include "Logger.hpp"
 
 /**
  * @brief Clase que representa un cliente conectado al servidor.

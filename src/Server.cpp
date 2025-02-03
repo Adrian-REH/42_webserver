@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 
-Server::Server(int port, int max_clients) : _port(port), _max_clients(max_clients), _env_len(0){
+Server::Server(int port) : _port(port) { //,_max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const int &port) {
@@ -33,10 +33,6 @@ int Server::getPort() const{
 	return _port;
 }
 
-
-
-
-
 Cookie Server::validate_session_id(std::string &session_id) {
 	std::vector<Cookie>::iterator it;
 	for (it = _cookies.begin(); it != _cookies.end(); it++) {
@@ -48,10 +44,6 @@ Cookie Server::validate_session_id(std::string &session_id) {
 	}
 	return Cookie();
 }
-	
-
-
-
 
 int Server::handle_input_client(int client_fd) {
 	Client* client;
@@ -148,15 +140,20 @@ void Server::execute(Client &client) {
 		*/
 		for (it = _locations.begin(); it != _locations.end(); it++) {
 			std::cout << path << " " << it->get_path() << std::endl;
-			if (starts_with(path, it->get_path())) {
+			if (starts_with(path, it->get_path()))
+			{
 				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());
+
 				std::string path_tmp = it->findScriptPath(path);
 				size_t dot_pos = path_tmp.rfind('.');
-				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
+				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
+				{
 					Logger::log(Logger::INFO,"Server.cpp", "Matching script found: " + path_tmp);
 					path = path_tmp;
 					break ;
-				}else if (it->get_auto_index()) {
+				}
+				else if (it->get_auto_index())
+				{
 					rs = generate_index_html(it->get_files(), path_tmp);
 					rs_start_line.append(rs);
 					client.send_response(rs_start_line);
