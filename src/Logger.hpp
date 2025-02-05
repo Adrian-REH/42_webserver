@@ -1,6 +1,10 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
+#ifndef LOG_LEVEL 
+#define LOG_LEVEL 2
+#endif
+
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -8,12 +12,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/time.h>
-
 class Logger {
 public:
-	enum LogLevel { INFO, ERROR, DEBUG, WARN };
+	enum LogLevel { INFO, ERROR, WARN, DEBUG };
+	static bool enableDebug;
 
 	static void log(LogLevel level, const std::string& module, const std::string& message) {
+		if (LOG_LEVEL  < level)
+			return ;
+
 		std::ostringstream logStream;
 		
 		std::time_t t = std::time(0);
@@ -43,8 +50,8 @@ private:
 		switch (level) {
 			case INFO: return "INFO ";
 			case ERROR: return "ERROR";
-			case DEBUG: return "DEBUG";
 			case WARN: return "WARN ";
+			case DEBUG: return "DEBUG";
 		}
 		return "UNKNOWN";
 	}
