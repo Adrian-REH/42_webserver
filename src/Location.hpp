@@ -125,7 +125,7 @@ class Location {
 		 * @return The full path to the script if successfully resolved.
 		 * @throws std::runtime_error If no matching file is found.
 		 */
-		std::string findScriptPath(const std::string &url_path);
+		int findScriptPath(const std::string &url_path, std::string &final_path);
 
 };
 

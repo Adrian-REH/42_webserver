@@ -50,6 +50,7 @@ int Location::get_auto_index() const {
 	return _auto_index;
 }
 std::vector<std::string> Location::get_files() const {
+	std::cout << "[ERROR] EOOOO "  << _files.size() << std::endl;
 	return _files;
 }
 
@@ -75,25 +76,32 @@ std::string Location::buildFullPath(const std::string &root,const std::string pa
 	return result;
 }
 
-std::string Location::findScriptPath(const std::string &url_path) {
+int Location::findScriptPath(const std::string &url_path, std::string &final_path) {
 	std::string path = extractStrEnd(url_path, _path);
 	std::string file;
-	// Case 1: Path ends with the configured index file.
+	std::cout << "[DEBUG] begin path " << path << std::endl;
+	// Case 1: Path is base root '/'
+	if (!_index.empty() && path.empty() && _path == "/")
+		return final_path = buildFullPath(_root_directory, "", _index), 0;
+	// Case 2: Path ends with the configured index file.
 	if (!_index.empty() && ends_with(path, _index))
-		return buildFullPath(_root_directory, "", path);
+		return final_path = buildFullPath(_root_directory, "", path), 0;
 	// Check for a matching file in _files.
 	size_t dot_pos = path.rfind('.');
 	if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)){
 		std::string path_tmp;
 		try {
 			path_tmp = extractStrStart(path, "/");
-			file = extractStrStart(path, path_tmp);
+			file = extractStrEnd(path, path_tmp); //extractStrEnd
+			std::cout << "[DEBUG] path_tmp: '" << path_tmp <<"' file " << file<< std::endl;
 			path = path_tmp;
 		} catch (const std::exception &e)
 		{
+			file = path;
 			std::cerr << e.what() << std::endl;
 		}
 	}
+	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
 
 	std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"'"<< std::endl;
@@ -103,11 +111,30 @@ std::string Location::findScriptPath(const std::string &url_path) {
 	if (work_dir.length() > 1)
 		dir++;
 	_files = get_all_dirs(dir); // TODO: Adjust for directories without leading '/'
+	std::cout << "[ERROR] _files retunr "  << _files.size() << std::endl;
 	for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
+		std::cout << "[DEBUG] it "<< *it<< std::endl;
 		if (!file.empty() && ends_with(file, *it)) {
-			return buildFullPath(_root_directory, path, *it);
-		} else if (*it == _index)
-			return buildFullPath(_root_directory, path, _index);
+			std::cout << "[DEBUG] por aqui "<< std::endl;
+			return final_path = buildFullPath(dir, "", *it), 0;
+		} 
+		else if (*it == _index){
+			std::cout << "[DEBUG] por aca "<< std::endl;
+			return final_path = buildFullPath(dir, "", _index), 0;
+		}
+			
 	}
-	return buildFullPath(_root_directory, path, "");
+	//No existe o autoindex
+	return (final_path = dir,1);
 }
+/**
+ * FIX: autoindex paths on findScriptPath()
+ * FIX: else if (*it == _index){ 
+ * 
+ * 
+ * casos:
+ * 	- /cgi-bin y path es /cgi-bin/ (no es el mismo) y existe el base '/'
+ * 	- /cgi-bin y no existe path relacionaddo pero exxiste el base /
+ * 	- /cgi-bin/upload_file.py y existe path es /cgi-bin/ con su index y otros mas incluido /
+ * 	- /images/kpop/ikon.jpeg y existe path /iamges/ con root en /img/www => /img/www/kpop/ikon.jpeg
+ */
