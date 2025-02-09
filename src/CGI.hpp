@@ -4,6 +4,7 @@
 #include <cstring>
 #include <sys/wait.h>
 #include "utils/Utils.hpp"
+#include "Logger.hpp"
 
 /**
  * @brief Clase para gestionar la ejecución de scripts CGI.

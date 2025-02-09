@@ -60,20 +60,31 @@ std::string CGI::execute() {
 				NULL
 			};
 			execve(interpreter.c_str(), argv, _env);
-			exit(EXIT_FAILURE);
+			exit(4);
 		} catch (const std::exception&  ) {
 			exit(2);
 		}
 	} else {
 		// Padre: Leer la salida del hijo
 		close(io[1]);
-		waitpid(pid, &status, 0);
-		status = WEXITSTATUS(status);
+		waitpid(pid, &status, WUNTRACED);
+		//status = WEXITSTATUS(status);
+		int ret;
+		if (WIFEXITED(status)){
+			ret = WEXITSTATUS(status);
+			//Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
+		}
+			
+		if (WIFSIGNALED(status)){
+			ret = WTERMSIG(status);
+			//Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
+		}
+			
 		// TODO: Intentar devolver multiples codigos de error
-		if (status) {
+		if (ret) {
 			close(io[0]);
-			std::string error(strerror(status));
-			throw std::runtime_error("Error en la ejecucion del CGI, Error : " + to_string(status) +  ", script_path: " + _script_path + ", body:" + _body);
+			std::string error(strerror(ret));
+			throw std::runtime_error("Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _body);
 		}
 		std::string result = readFd(io[0]);
 		close(io[0]);
