@@ -53,14 +53,21 @@ int Server::handle_input_client(int client_fd) {
 		Logger::log(Logger::ERROR,"Server.cpp", "Client for FD" + to_string(client_fd) + " doesn't exist.");
 		return -1;
 	}
-	if (client->receive_data() < 0)
+	try {
+		if (client->receive_data() < 0)
 		return -1;
+	} catch (const std::exception &e)
+	{
+		std::cerr <<"Exception: " << e.what() << std::endl;
+		return -1;
+	}
+	
 	return 0;
 }
 
 int Server::handle_output_client(int client_fd) {
 	Client* client = _clients[client_fd];
-	Logger::log(Logger::INFO,"Server.cpp", "Executing read request for client_fd: " + to_string(client_fd));
+	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for client_fd: " + to_string(client_fd));
 	try {
 		execute(*client);
 
@@ -98,27 +105,29 @@ std::string generate_index_html(std::vector<std::string> files, std::string dir_
     index_file.append( "<h1>Index of ");
 	index_file.append(dir_path);
 	index_file.append("</h1>\n<ul>\n");
-	std::cout << "[ERROR] HOLA "<< std::endl;
+
     // Leer los archivos y directorios
 	std::vector<std::string>::iterator it;
     for (it = files.begin(); it != files.end(); it ++) {
-        std::string entry_name = *it;
+        std::string entry_path = *it;
         // Ignorar los directorios "." y ".."
-        if (entry_name == "." || entry_name == "..") {
+        if (entry_path == "." || entry_path == "..") {
             continue;
         }
         // Escribir cada archivo/directorio en la lista HTML
         index_file.append( "<li><a href=\"");
-		index_file.append(entry_name);
+		index_file.append(entry_path);
 		index_file.append("\">");
+
+		std::string entry_name(entry_path);
+		entry_name = extractStrREnd(entry_name, "/");
+	
 		index_file.append(entry_name);
 		index_file.append("</a></li>\n");
-		std::cout << "[ERROR] HOLAAA "<< std::endl;
     }
 
     // Escribir el pie de página HTML
     index_file.append("</ul>\n</body>\n</html>\n");
-	std::cout << "[ERROR] BYEEE "<< std::endl;
 	return index_file;
 }
 
@@ -146,12 +155,17 @@ void Server::execute(Client &client) {
 			if (starts_with(path, it->get_path()))
 			{
 				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());		
+				try {
 
-				if (it->findScriptPath(path, path_tmp) == 1)
-				{
-					autoindex = it->get_auto_index();
-					files = it->get_files();
+					if (it->findScriptPath(path, path_tmp) == 1)
+					{
+						autoindex = it->get_auto_index();
+						files = it->get_files();
+					}
+				} catch (const std::exception &e) {
+					std::cerr << "[ERROR] Exception: " << e.what() << std::endl;
 				}
+				
 				
 			}
 		}
@@ -171,7 +185,8 @@ void Server::execute(Client &client) {
 				std::cout << rs << std::endl;
 				inFile.close();
 			}
-			else{
+			else
+			{
 				size_t dot_pos = path_tmp.rfind('.');
 				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
 				{
@@ -193,7 +208,7 @@ void Server::execute(Client &client) {
 
 					Logger::log(Logger::ERROR,"Server.cpp", "Throwing exception " + path_tmp);
 					throw std::runtime_error("No script found for the given path");
-			}
+				}
 			
 			}
 				
