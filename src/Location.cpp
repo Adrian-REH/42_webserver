@@ -81,25 +81,18 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 	std::string file;
 	std::cout << "[DEBUG] begin path " << path << std::endl;
 	// Case 1: Path is base root '/'
-	if (!_index.empty() && path.empty() && _path == "/")
+	if (!_index.empty() && path.empty() && _path == url_path)
 		return final_path = buildFullPath(_root_directory, "", _index), 0;
 	// Case 2: Path ends with the configured index file.
 	if (!_index.empty() && ends_with(path, _index))
 		return final_path = buildFullPath(_root_directory, "", path), 0;
 	// Check for a matching file in _files.
 	size_t dot_pos = path.rfind('.');
-	if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)){
-		std::string path_tmp;
-		try {
-			path_tmp = extractStrStart(path, "/");
-			file = extractStrEnd(path, path_tmp); //extractStrEnd
-			std::cout << "[DEBUG] path_tmp: '" << path_tmp <<"' file " << file<< std::endl;
-			path = path_tmp;
-		} catch (const std::exception &e)
-		{
-			file = path;
-			std::cerr << e.what() << std::endl;
-		}
+	if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
+		std::string path_tmp  = extractStrStart(path, "/");
+		file = extractStrEnd(path, path_tmp); //extractStrEnd
+		std::cout << "[DEBUG] path_tmp: '" << path_tmp <<"' file " << file<< std::endl;
+		path = path_tmp;
 	}
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
@@ -110,6 +103,8 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 	const char * dir = work_dir.c_str();
 	if (work_dir.length() > 1)
 		dir++;
+
+	// If directory doesn't exist, it will throw an exception
 	_files = get_all_dirs(dir); // TODO: Adjust for directories without leading '/'
 	std::cout << "[ERROR] _files retunr "  << _files.size() << std::endl;
 	for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
@@ -118,10 +113,10 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 			std::cout << "[DEBUG] por aqui "<< std::endl;
 			return final_path = buildFullPath(dir, "", *it), 0;
 		} 
-		else if (*it == _index){
+		/*else if (*it == _index){
 			std::cout << "[DEBUG] por aca "<< std::endl;
 			return final_path = buildFullPath(dir, "", _index), 0;
-		}
+		}*/
 			
 	}
 	//No existe o autoindex
