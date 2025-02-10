@@ -89,7 +89,7 @@ Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deq
 			}
 			if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
 				//char *endp; TODO
-				srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
+				//srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
 				continue ;
 			}
 			//std::cout << line << std::endl; // Procesar línea

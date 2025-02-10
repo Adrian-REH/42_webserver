@@ -1,7 +1,6 @@
 #include "Server.hpp"
 #include "ParserServer.hpp"
 #include "HttpServerManager.hpp"
-bool Logger::isEnableDebug = false;
 
 int main(int argc, char **argv, char **env) {
 	ParserServer parserSrv;

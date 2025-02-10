@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 
-Server::Server(int port) : _port(port) { //,_max_clients(max_clients), _env_len(0){
+Server::Server(int port, size_t max_clients) : _port(port), _max_clients(max_clients) { //,_max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const int &port) {
@@ -87,6 +87,7 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: " + client_info(client_address));
 	return std::make_pair(this, client_fd);
 }
+
 
 Cookie Server::validate_session_id(std::string &session_id) {
 	std::vector<Cookie>::iterator it;
@@ -300,30 +301,9 @@ void Server::execute(Client &client) {
 		rs_start_line.append(rs);
 		Logger::log(Logger::INFO,"Server.cpp", "Sending response to client. Response size: " + to_string(rs_start_line.size()) + "bytes");
 		client.send_response(rs_start_line);
+	} catch(std::exception &e) {
+		Logger::log(Logger::ERROR,"Server.cpp", e.what());
+
 	}
 
-
-	//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
-	std::string cookie_val = req.get_header_by_key("Cookie");
-	Logger::log(Logger::INFO,"Server.cpp", "Verifing Cookie: " + cookie_val);
-	Cookie cookie = handle_cookie_session(cookie_val);
-	//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
-
-	std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
-	char* env[] = {
-		(char*)http_cookie.c_str(),
-		NULL
-	};
-	Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
-	//Gestiono la respuesta de la ejecucion del CGI
-	rs = CGI(path, method, body, env).execute();
-	// Agrego Set-cookie en caso de que lo requiera
-	if (rs.find("Set-Cookie: session_id=") != std::string::npos){
-		cookie.set_session("valid");
-		if (!cookie.empty())
-			_cookies.push_back(cookie);
-	}
-	rs_start_line.append(rs);
-	Logger::log(Logger::INFO,"Server.cpp", "Sending response to client. Response size: " + to_string(rs_start_line.size()) + "bytes");
-	client.send_response(rs_start_line);
 }

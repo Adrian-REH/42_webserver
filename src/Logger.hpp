@@ -1,13 +1,10 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
-<<<<<<< HEAD
-=======
 
 #ifndef LOG_LEVEL 
 #define LOG_LEVEL 2
 #endif
 
->>>>>>> refs/remotes/origin/ft/socket_integration
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -60,8 +57,4 @@ private:
 	}
 };
 
-<<<<<<< HEAD
 #endif
-=======
-#endif
->>>>>>> refs/remotes/origin/ft/socket_integration
