@@ -184,8 +184,6 @@ class Location {
 				path = path_tmp;
 			}
 			std::string work_dir = buildFullPath(_root_directory, path, "");
-
-			std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"'"<< std::endl;
 			if (work_dir == "/")
 				work_dir = ".";
 			const char * dir = work_dir.c_str();

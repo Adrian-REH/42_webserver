@@ -1,3 +1,5 @@
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -9,8 +11,11 @@
 class Logger {
 public:
 	enum LogLevel { INFO, ERROR, DEBUG, WARN };
+	static bool isEnableDebug;
 
 	static void log(LogLevel level, const std::string& module, const std::string& message) {
+		if (!isEnableDebug && level == DEBUG)
+			return ;
 		std::ostringstream logStream;
 		
 		std::time_t t = std::time(0);
@@ -46,3 +51,5 @@ private:
 		return "UNKNOWN";
 	}
 };
+
+#endif

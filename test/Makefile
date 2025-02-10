@@ -12,7 +12,7 @@
 
 NAME = test
 CC = c++
-CFLAGS = -std=c++98
+CFLAGS = -std=c++98 -g3
 SRCS = test_multi_request.cpp 
 COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = 

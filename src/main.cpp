@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "ParserServer.hpp"
 #include "HttpServerManager.hpp"
-
+bool Logger::isEnableDebug = false;
 
 int main(int argc, char **argv, char **env) {
 	ParserServer parserSrv;
@@ -13,7 +13,7 @@ int main(int argc, char **argv, char **env) {
 	}
 	else if (argc == 2 && !parserSrv.dumpRawData(argv[1]))
 		return 1;
-
+	
 	std::vector<Server> srvs =  parserSrv.execute(env);
 
 	HttpServerManager httpManager;

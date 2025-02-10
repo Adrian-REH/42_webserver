@@ -6,7 +6,8 @@
 #include <sys/epoll.h>
 #include "utils/Utils.hpp"
 #include "Request.hpp"
-
+#include "Logger.hpp"
+#include <ctime>
 /**
  * @brief Clase que representa un cliente conectado al servidor.
  * 
@@ -16,6 +17,8 @@
 class Client {
 private:
 	int _socket_fd;
+	size_t _wait_time;
+	size_t _last_request;
 	Request _request;
 
 public:
@@ -27,7 +30,11 @@ public:
 	 * 
 	 * @param socket_fd Descriptor de archivo del socket asociado al cliente.
 	 */
-	Client(int socket_fd) : _socket_fd(socket_fd), _request() {}
+	Client(int socket_fd, std::time_t wait_time = 1, std::time_t _last_request = std::time(0)) :
+	_socket_fd(socket_fd),
+	_wait_time(wait_time),
+	_last_request(_last_request),
+	_request() {}
 	/**
 	 * @brief Destructor de la clase `Client`.
 	 * 
@@ -45,6 +52,7 @@ public:
 	Request get_request() const {
 		return _request;
 	}
+	
 	/**
 	 * @brief Obtiene el descriptor de archivo del socket asociado al cliente.
 	 * 
@@ -55,6 +63,9 @@ public:
 	 */
 	int get_socket_fd() const {
 		return _socket_fd;
+	}
+	void reset_last_request() {
+		_last_request = std::time(0);
 	}
 	/**
 	 * @brief Método para recibir datos desde un socket y procesar la solicitud recibida.
@@ -67,15 +78,20 @@ public:
 	 * @return false Si el cliente se desconecta o no se reciben datos.
 	 */
 	int receive_data() {
-		char buffer[1024];
+		char buffer[8192];
 		int bytes_received = recv(_socket_fd, buffer, sizeof(buffer), 0);
 		if (bytes_received > 0) {
 			Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
 			_request.parse_request(buffer, bytes_received);
+			if (_request.get_header_by_key("Connection") == "close") {
+				Logger::log(Logger::INFO, "Client.cpp", "El cliente pidio desconectarse, client_fd: " + to_string(_socket_fd));
+				return 1;
+			}
+			reset_last_request();
 			return 0;
 		} else {
 			// Cliente desconectado
-			Logger::log(Logger::ERROR, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
+			Logger::log(Logger::ERROR, "Client.cpp", "ERROR: Cliente desconectado, socket fd" + to_string(_socket_fd));
 			return -1;
 		}
 	}
@@ -92,7 +108,6 @@ public:
 		if (!response.empty()) {
 			Logger::log(Logger::INFO, "Client.cpp", response.substr(0, response.find("\n")));
 			send(_socket_fd, response.c_str(), response.size(), 0);
-		close(_socket_fd);
 		}
 	}
 	/**
@@ -108,7 +123,9 @@ public:
 	void send_error(int code, const std::string& message) {
 		std::string response = "HTTP/1.1 " + to_string(code) + " " + message + "\r\n\r\n";
 		send(_socket_fd, response.c_str(), response.size(), 0);
-		close(_socket_fd);
+	}
+	bool has_client_timed_out() {
+		return (std::time(0) - _last_request) > _wait_time;
 	}
 };
 

@@ -22,14 +22,14 @@ class ParserServer {
 			for (++it; it != end; ++it) {
 				std::string line = *it;
 				if (line.find("}") != std::string::npos) { // Fin de limit_except
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
+
 					break;
 				}
 				else if (line.find("deny ") != std::string::npos && line.find(";") != std::string::npos) {
 					limExc.setDenyAction(extractStrBetween(line, "deny ", ";"));
 					continue ;
 				}
-				//std::cout << line << std::endl; // Procesar línea
 			}
 			return limExc;
 		}
@@ -40,10 +40,10 @@ class ParserServer {
 			for (++it; it != end; ++it) {
 				std::string line = (*it);
 				if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
 					loc.set_limit_except(parseLimitExcept(it, end));
 				} else if (line.find("}") != std::string::npos) { // Fin de location
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
 					return loc;
 				} else {
 					if (line.find("index ") != std::string::npos && line.find(";") != std::string::npos){
@@ -83,10 +83,10 @@ class ParserServer {
 			for (++it; it != end; ++it) {
 				std::string line = (*it);
 				if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
 					srv.addLocation(parseLocation(it, end));
 				} else if (line.find("}") != std::string::npos) { // Fin de server
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
 					return srv;
 				} else {
 					if (line.find("listen ") != std::string::npos && line.find(";") != std::string::npos) {
@@ -97,10 +97,9 @@ class ParserServer {
 					}
 					if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
 						//char *endp; TODO
-						srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
+						srv.setServerName(extractStrBetween(line, "server_name ", ";"));
 						continue ;
 					}
-					//std::cout << line << std::endl; // Procesar línea
 					//Identificar propiedades de Server y procesarlo. srv.set_propertie
 				}
 			}
@@ -128,16 +127,18 @@ class ParserServer {
 		std::vector<Server> execute(char **env) {
 			std::vector<Server> srvs;
 			std::deque<std::string>::iterator it;
-
-			std::cout<< "env " << env[0] << std::endl; // TODO: borrar linea
+			
+			std::string env_init(env[0]);
+			Logger::log(Logger::DEBUG, "ParserServer.cpp", "env: " + env_init);
 			//Verificar sintaxis y 
-			std::cout<< "n_lines of file: " << _content_file.size() << std::endl;
+			Logger::log(Logger::DEBUG, "ParserServer.cpp", "n_lines of file: " + to_string(_content_file.size()));
+
 			if (_content_file.size() <= 0)
 				throw std::runtime_error("Error not config");
 			for (it = _content_file.begin(); it != _content_file.end(); ++it) {
 				std::string line = (*it);
 				if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
-					std::cout << line << std::endl;
+					Logger::log(Logger::DEBUG, "ParserServer.cpp", line);
 					// srvs.push_back(parseServer(it, _content_file.end()));
 					parseServer(it, _content_file.end());
 					
@@ -146,6 +147,8 @@ class ParserServer {
 
 			srvs.push_back(Server()
 			.set_port(8080)
+			.setServerName("principal.com")
+			.setMaxClients(10)
 			.addLocation(Location()
 				.set_path("/cgi-bin/")
 				.set_auto_index(true)
@@ -154,6 +157,8 @@ class ParserServer {
 				.build()));
 			srvs.push_back(Server()
 			.set_port(8081)
+			.setMaxClients(10)
+			.setServerName("secundario.com")
 			.addLocation(Location()
 				.set_path("/")
 				.set_auto_index(true)

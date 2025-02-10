@@ -6,6 +6,7 @@
 
 HttpServerManager::HttpServerManager() {}
 
+
 int HttpServerManager::start(std::vector<Server> srvs) {
 	struct epoll_event ev;
 	std::vector<Server>::iterator it;
@@ -35,8 +36,8 @@ int HttpServerManager::start(std::vector<Server> srvs) {
 		}
 		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Server socket registered with epoll");
 
-		_sock_srvs[socket_fd] = *it;
-		_max_events += MAX_CLIENTS;
+		_sock_srvs[socket_fd] = &(*it);
+		_max_events += it->getMaxClients();
 	}
 	if (_sock_srvs.empty()) {
 		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Number of server is 0");
@@ -48,70 +49,128 @@ int HttpServerManager::start(std::vector<Server> srvs) {
 
 void HttpServerManager::stop() {
 	std::vector<int>::iterator it;
-	for (it = _srv_sockets.begin(); it != _srv_sockets.end(); it++)
+	std::map<int, Server*> ::iterator it_clifd_srv;
+	for (it = _srv_sockets.begin(); it != _srv_sockets.end(); it++){
 		close(*it);
+		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, *it, NULL);
+		_srv_sockets.erase(it);
+		it = _srv_sockets.begin();
+	}
+	for (it_clifd_srv = _cli_srvs.begin(); it_clifd_srv != _cli_srvs.end(); it_clifd_srv++){
+		deleteClient(it_clifd_srv->first);
+		it_clifd_srv = _cli_srvs.begin();
+	}
+
 	close(_epoll_fd);
 }
 
+std::map<int, Server *>::iterator HttpServerManager::deleteClient(int client_fd) {
+	std::map<int, Server *>::iterator it = _cli_srvs.find(client_fd);
+	if (it != _cli_srvs.end()){
+		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
+		close(client_fd);
+		_cli_srvs[client_fd]->deleteClient(client_fd);
+		_cli_srvs.erase(client_fd);
+	}
+	return it;
+}
+
+
+
+int HttpServerManager::manageIdleClients(struct epoll_event *events, int nfds) {
+	std::map<int, Server*>::iterator it ;
+	std::map<int, Server*>::iterator it_event ;
+	for (int i = 0; i < nfds; i++) {
+		it_event = _cli_srvs.find(events[i].data.fd);
+		if (it_event != _cli_srvs.end() && it_event->second->hasClientTimedOut(it_event->first)) {
+				deleteClient(it_event->first);
+				events[i].data.fd = 0;
+				events[i].events = 0;
+				nfds--;
+				Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(it_event->first)+" timed out");
+		}
+	}
+	for (it = _cli_srvs.begin(); it != _cli_srvs.end(); ) {
+		if (it->second->hasClientTimedOut(it->first)) {
+			deleteClient(it->first);
+			it = _cli_srvs.begin();
+			Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(it->first)+" timed out");
+		} else {
+			it++;
+		}
+	}
+	return nfds;
+}
 
 void HttpServerManager::handle_epoll()
 {
 	struct epoll_event events[_max_events];
 	while (true) {
-		int nfds = epoll_wait(_epoll_fd, events, _max_events, -1);
+		int nfds = epoll_wait(_epoll_fd, events, _max_events, 3000);
 		if (nfds == -1) {
 			Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll_wait failed");
 			stop();
 			return ;
 		}
-		
+		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds) + ", Clients conected: " + to_string(_cli_srvs.size()));
+
+		nfds = manageIdleClients(events, nfds);
 		for (int i = 0; i < nfds; ++i) {
-		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds));
-			//TODO: comprobar error control antes que todo
-			std::map<int, Server>::iterator it = _sock_srvs.find(events[i].data.fd); 
-			if (it != _sock_srvs.end()) {
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected");
-				if (accept_connections(it->second)) {
-					Logger::log(Logger::INFO,"HttpServerManager.cpp", "Connection accepted successfully");
-				} else {
+
+			Logger::log(Logger::INFO, "HttpServerManager.cpp", "Manage fd: " + to_string(events[i].data.fd));
+			std::map<int, Server*>::iterator it_srv = _sock_srvs.find(events[i].data.fd); 
+			std::map<int, Server *>::iterator it_cli = _cli_srvs.find(events[i].data.fd);
+
+			if (it_srv != _sock_srvs.end()) {
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server name: " + it_srv->second->getServerName());
+				try {
+					std::pair<Server*, int > srv_clifd = it_srv->second->accept_connections(_epoll_fd);
+					if (srv_clifd.second < 0) // No pudo aceptar la conexion
+						continue ;
+					_cli_srvs[srv_clifd.second] = srv_clifd.first;
+					Logger::log(Logger::INFO,"HttpServerManager.cpp", "Connection accepted successfully: new client_fd: " + to_string(srv_clifd.second));
+				} catch (std::exception &e) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Failed to accept connection");
 				}
 			}
-			else if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
+			else if (it_cli != _cli_srvs.end() && ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP))) {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Failed event");
-				close(events[i].data.fd);
-				_cli_srvs.erase(events[i].data.fd);
+					deleteClient(it_cli->first);
 			}
-			else if ((events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
+			else if (it_cli != _cli_srvs.end() &&  (events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
 			{
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling output client with FD: " + to_string(events[i].data.fd));
-				if (_cli_srvs[events[i].data.fd].handle_output_client(events[i].data.fd) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling output client with FD: " + to_string(events[i].data.fd));
-					close(events[i].data.fd);
-					_cli_srvs.erase(events[i].data.fd);
+				if (it_cli->second->handle_output_client(it_cli->first) < 0){
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling output client with FD: " + to_string(it_cli->first));
+					deleteClient(it_cli->first);
+					continue ;
 				}
-				if (set_event_action(events[i].data.fd, EPOLLIN) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(events[i].data.fd));
-					close(events[i].data.fd);
-					_cli_srvs.erase(events[i].data.fd);
+				if (set_event_action(it_cli->first, EPOLLIN) < 0) {
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(it_cli->first));
+					deleteClient(it_cli->first);
 				}
 			}
-			else if ((events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
+			else if (it_cli != _cli_srvs.end() && (events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
 			{
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client with FD: " + to_string(events[i].data.fd));
-				if (_cli_srvs[events[i].data.fd].handle_input_client(events[i].data.fd) < 0) {
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + to_string(events[i].data.fd));
-					close(events[i].data.fd);
-					_cli_srvs.erase(events[i].data.fd);
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client_fd: " + to_string(events[i].data.fd));
+				int result = it_cli->second->handle_input_client(it_cli->first);
+				if (result < 0) {
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + to_string(it_cli->first));
+					deleteClient(it_cli->first);
+					continue ;
+				} else if (result == 1) {
+					Logger::log(Logger::INFO,"HttpServerManager.cpp", "Conection close by client_fd: " + to_string(it_cli->first));
+					deleteClient(it_cli->first);
+					continue ;
 				}
-				if (set_event_action(events[i].data.fd, EPOLLOUT) < 0){
-					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(events[i].data.fd));
-					close(events[i].data.fd);
-					_cli_srvs.erase(events[i].data.fd);
-				}
+				if (set_event_action(it_cli->first, EPOLLOUT) < 0) {
+						Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(it_cli->first));
+						deleteClient(it_cli->first);
+					}
 			}
-			else{
+			else {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll error.");
+				stop();
 				return ;
 			}
 		}
@@ -147,8 +206,8 @@ int HttpServerManager::create_socket_fd(int port) {
 	Logger::log(Logger::DEBUG,"HttpServerManager.cpp", "Max-Clients: " + to_string(MAX_CLIENTS) + ", socket_fd: " + to_string(socket_fd));
 	return socket_fd;
 }
-
-bool HttpServerManager::accept_connections(Server& srv) {
+//TODO: No hay limites de clientes????, no se le rechaza la conexion!!!!
+/* bool HttpServerManager::accept_connections(Server& srv) {
 	struct sockaddr_in client_address;
 	struct epoll_event ev;
 	socklen_t client_len = sizeof(client_address);
@@ -165,7 +224,7 @@ bool HttpServerManager::accept_connections(Server& srv) {
 
 	_cli_srvs[client_fd] = srv.addClient(Client(client_fd));
 	return 1;
-}
+} */
 
 int HttpServerManager::set_event_action(int client_fd, uint32_t action)
 {
@@ -173,7 +232,8 @@ int HttpServerManager::set_event_action(int client_fd, uint32_t action)
 	ev.events = action | EPOLLET;
 	ev.data.fd = client_fd;
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) == -1) {
-		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Failed to register client socket with epoll" + to_string(_epoll_fd) + ", client_fd: " + to_string(client_fd));
+		std::string error (strerror(errno));
+		Logger::log(Logger::WARN,"HttpServerManager.cpp", "ERROR: "+ error + ", Failed to register client socket with epoll: " + to_string(_epoll_fd) + ", client_fd: " + to_string(client_fd));
 		return (-1);
 	}
 	return 0;

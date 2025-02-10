@@ -114,6 +114,7 @@
     "list": "cpp",
     "unordered_set": "cpp",
     "set": "cpp",
-    "cinttypes": "cpp"
+    "cinttypes": "cpp",
+    "iomanip": "cpp"
   }
 }

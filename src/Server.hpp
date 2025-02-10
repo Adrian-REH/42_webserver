@@ -19,7 +19,6 @@
 #include "LimitExcept.hpp"
 #include "utils/Utils.hpp"
 
-
 class Cookie {
 private:
     std::string _session_id;
@@ -82,7 +81,7 @@ private:
 	std::vector<Location> _locations;
 	int _socket_fd;
 	int epoll_fd;
-	int _max_clients;
+	size_t _max_clients;
 	size_t _env_len;
 	
 	Cookie validate_session_id(std::string &session_id);
@@ -95,11 +94,22 @@ public:
 	Server(int port = 8080, int max_clients = 10 );
 	Server &set_port(const int &port);
 	Server &setSocketFd(const int &sock_fd);
-	Server &set_server_name(const std::string &server_name);
+	Server &setServerName(const std::string &server_name);
+	Server &setMaxClients(const int &max_cients);
 	Server &addLocation(const Location &location);
 	Server &addClient(const Client &cli);
 	int getSocketFd() const;
 	int getPort() const;
+	void deleteClient(const int client_fd);
+	int getMaxClients() const;
+	bool hasClientTimedOut(const int key_client_fd) {
+		std::map<int, Client*>::iterator it = _clients.find(key_client_fd);
+		if (it != _clients.end())
+			return it->second->has_client_timed_out();
+		return false;
+	}
+	std::string getServerName() const;
+	std::pair <Server*, int> accept_connections(int epoll_fd);
 
 };
 

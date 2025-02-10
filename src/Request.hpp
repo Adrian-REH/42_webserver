@@ -2,7 +2,7 @@
 #define REQUEST_HPP
 #include <map>
 #include "utils/Utils.hpp"
-
+#include "Logger.hpp"
 const std::string CONTENT_LENGTH = "Content-Length";
 
 /**
@@ -125,7 +125,7 @@ class Request {
 		void display_header() {
 			std::map<std::string, std::string>::iterator it;
 			for (it = _headers.begin(); it != _headers.end(); it ++){
-				std::cout << it->first << " : " << it->second << std::endl;
+				Logger::log(Logger::DEBUG, "Request.cpp", it->first + " : " + it->second);
 			}
 		}
 };
