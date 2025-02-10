@@ -232,8 +232,7 @@ int HttpServerManager::set_event_action(int client_fd, uint32_t action)
 	ev.events = action | EPOLLET;
 	ev.data.fd = client_fd;
 	if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client_fd, &ev) == -1) {
-		std::string error (strerror(errno));
-		Logger::log(Logger::WARN,"HttpServerManager.cpp", "ERROR: "+ error + ", Failed to register client socket with epoll: " + to_string(_epoll_fd) + ", client_fd: " + to_string(client_fd));
+		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Failed to register client socket with epoll " + to_string(_epoll_fd) + ", client_fd: " + to_string(client_fd));
 		return (-1);
 	}
 	return 0;

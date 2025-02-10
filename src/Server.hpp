@@ -80,9 +80,10 @@ private:
 	std::map<int, Client*> _clients;
 	std::vector<Location> _locations;
 	int _socket_fd;
-	int epoll_fd;
-	size_t _max_clients;
-	size_t _env_len;
+
+	//int epoll_fd;
+	//int _max_clients;
+	//size_t _env_len;
 	
 	Cookie validate_session_id(std::string &session_id);
 	Cookie handle_cookie_session(std::string cookieHeader);
@@ -91,7 +92,7 @@ private:
 public:
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
-	Server(int port = 8080, int max_clients = 10 );
+	Server(int port = 8080);
 	Server &set_port(const int &port);
 	Server &setSocketFd(const int &sock_fd);
 	Server &setServerName(const std::string &server_name);

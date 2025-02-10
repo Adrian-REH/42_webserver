@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 
-Server::Server(int port, int max_clients) : _port(port), _max_clients(max_clients), _env_len(0){
+Server::Server(int port) : _port(port) { //,_max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const int &port) {
@@ -88,7 +88,6 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	return std::make_pair(this, client_fd);
 }
 
-
 Cookie Server::validate_session_id(std::string &session_id) {
 	std::vector<Cookie>::iterator it;
 	for (it = _cookies.begin(); it != _cookies.end(); it++) {
@@ -100,10 +99,6 @@ Cookie Server::validate_session_id(std::string &session_id) {
 	}
 	return Cookie();
 }
-	
-
-
-
 
 int Server::handle_input_client(int client_fd) {
 	std::map<int, Client *>::iterator it = _clients.find(client_fd);
@@ -114,12 +109,22 @@ int Server::handle_input_client(int client_fd) {
 		Logger::log(Logger::ERROR,"Server.cpp", "Client for FD" + to_string(client_fd) + " doesn't exist.");
 		return -1;
 	}
-	return client->receive_data();
+
+	try {
+		if (client->receive_data() < 0)
+		return -1;
+	} catch (const std::exception &e)
+	{
+		std::cerr <<"Exception: " << e.what() << std::endl;
+		return -1;
+	}
+	
+	return 0;
 }
 
 int Server::handle_output_client(int client_fd) {
 	Client* client = _clients[client_fd];
-	Logger::log(Logger::INFO,"Server.cpp", "Executing read request for client_fd: " + to_string(client_fd));
+	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for client_fd: " + to_string(client_fd));
 	try {
 		execute(*client);
 	} catch (std::exception &e) {
@@ -151,8 +156,7 @@ Cookie Server::handle_cookie_session(std::string cookieHeader) {
 }
 
 std::string generate_index_html(std::vector<std::string> files, std::string dir_path) {
-   std::string index_file;
-
+	std::string index_file;
     // Escribir el encabezado HTML
 	index_file = "Content-Type: text/html\r\n\r\n";
     index_file.append("<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<title>Index of ");
@@ -165,15 +169,19 @@ std::string generate_index_html(std::vector<std::string> files, std::string dir_
     // Leer los archivos y directorios
 	std::vector<std::string>::iterator it;
     for (it = files.begin(); it != files.end(); it ++) {
-        std::string entry_name = *it;
+        std::string entry_path = *it;
         // Ignorar los directorios "." y ".."
-        if (entry_name == "." || entry_name == "..") {
+        if (entry_path == "." || entry_path == "..") {
             continue;
         }
         // Escribir cada archivo/directorio en la lista HTML
         index_file.append( "<li><a href=\"");
-		index_file.append(entry_name);
+		index_file.append(entry_path);
 		index_file.append("\">");
+
+		std::string entry_name(entry_path);
+		entry_name = extractStrREnd(entry_name, "/");
+	
 		index_file.append(entry_name);
 		index_file.append("</a></li>\n");
     }
@@ -188,37 +196,110 @@ void Server::execute(Client &client) {
 	std::string path = req.get_path(); // Método para obtener el path del script CGI
 	std::string method = req.get_method();    // Método para obtener el método HTTP
 	std::string body = req.get_body();        // Método para obtener el cuerpo del request
-	Logger::log(Logger::INFO,"Server.cpp", "Starting CGI execution.");
-	std::string rs;
-	std::string rs_start_line = "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\n";
-	Logger::log(Logger::DEBUG,"Server.cpp", "Request details: method:  " + method + ", path: " + path + ", body size: " + to_string(body.size()) + "bytes");
-	std::vector<Location>::iterator it;
-	std::map<std::string, Location>::iterator it_map;
-	//TODO: Verificar y hacer un algoritmo para manejar los distintos Locations y no ejecutar de mas findScriptPath
-	/* Define a directory or a file from where the file should be searched (for example,
-		if url /kapouet is rooted to /tmp/www, url /kapouet/pouic/toto/pouet is
-		/tmp/www/pouic/toto/pouet).
-	*/
-	for (it = _locations.begin(); it != _locations.end(); it++) {
-		Logger::log(Logger::DEBUG, "Request.cpp", "verifing: " + path + " and" + it->get_path());
-		if (starts_with(path, it->get_path())) {
-			Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());
-			std::string path_tmp = it->findScriptPath(path);
-			size_t dot_pos = path_tmp.rfind('.');
-			if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
-				Logger::log(Logger::INFO,"Server.cpp", "Matching script found: " + path_tmp);
-				path = path_tmp;
-				break ;
-			}else if (it->get_auto_index()) {
-				rs = generate_index_html(it->get_files(), path_tmp);
-				rs_start_line.append(rs);
-				client.send_response(rs_start_line);
-				return ;
-			}
-			else {
-				throw std::runtime_error("No script found for the given path");
+	bool autoindex = false;
+	std::vector<std::string> files;
+
+	try {
+		Logger::log(Logger::INFO,"Server.cpp", "Starting CGI execution.");
+		std::string rs;
+		std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
+		Logger::log(Logger::DEBUG,"Server.cpp", "Request details: method:  " + method + ", path: " + path + ", body size: " + to_string(body.size()) + "bytes");
+		std::vector<Location>::iterator it;
+		std::map<std::string, Location>::iterator it_map;
+		bool is_cgi = false;
+		std::string path_tmp;
+		
+		
+		for (it = _locations.begin(); it != _locations.end(); it++) {
+			std::cout << path << " " << it->get_path() << std::endl;
+			if (starts_with(path, it->get_path()))
+			{
+				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());		
+				try {
+
+					if (it->findScriptPath(path, path_tmp) == 1)
+					{
+						autoindex = it->get_auto_index();
+						files = it->get_files();
+					}
+				} catch (const std::exception &e) {
+					std::cerr << "[ERROR] Exception: " << e.what() << std::endl;
+				}
+				
+				
 			}
 		}
+		//continue ;
+			if (ends_with(path_tmp, ".html"))
+			{
+				path_tmp.erase(0,1);
+				Logger::log(Logger::INFO,"Server.cpp", "HTML file: " + path_tmp);
+				
+				std::ifstream	inFile(path_tmp.c_str());
+				if (!inFile)
+					std::cout << "ERROR inFile"<<std::endl;
+				std::string line;
+				rs = "Content-Type: text/html\r\n\r\n";
+				while (std::getline(inFile, line))
+					rs += line + "\n";
+				std::cout << rs << std::endl;
+				inFile.close();
+			}
+			else
+			{
+				size_t dot_pos = path_tmp.rfind('.');
+				if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
+				{
+					Logger::log(Logger::INFO,"Server.cpp", "Matching script found: " + path_tmp);
+					path = path_tmp;
+					is_cgi = true;
+				}
+				else if (autoindex) // Mostrar contenido dir
+				{
+					//TODO: no script encontrado pero tiene autoindex -> no error
+					Logger::log(Logger::INFO,"Server.cpp", "Generating index: " + path_tmp);
+					rs = generate_index_html(files, path_tmp);
+					std::cout << rs << std::endl;
+					rs_start_line.append(rs);
+					client.send_response(rs_start_line);
+					return ;
+				}
+				else {
+
+					Logger::log(Logger::ERROR,"Server.cpp", "Throwing exception " + path_tmp);
+					throw std::runtime_error("No script found for the given path");
+				}
+			
+			}
+				
+
+		//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
+		std::string cookie_val = req.get_header_by_key("Cookie");
+		Logger::log(Logger::INFO,"Server.cpp", "Verifing Cookie: " + cookie_val);
+		Cookie cookie = handle_cookie_session(cookie_val);
+		//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
+
+		std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
+		char* env[] = {
+			(char*)http_cookie.c_str(),
+			NULL
+		};
+		if (is_cgi)
+		{
+			Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
+			//Gestiono la respuesta de la ejecucion del CGI
+			rs = CGI(path, method, body, env).execute();
+		}
+		
+		// Agrego Set-cookie en caso de que lo requiera
+		if (rs.find("Set-Cookie: session_id=") != std::string::npos){
+			cookie.set_session("valid");
+			if (!cookie.empty())
+				_cookies.push_back(cookie);
+		}
+		rs_start_line.append(rs);
+		Logger::log(Logger::INFO,"Server.cpp", "Sending response to client. Response size: " + to_string(rs_start_line.size()) + "bytes");
+		client.send_response(rs_start_line);
 	}
 
 
