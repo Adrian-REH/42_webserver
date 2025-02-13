@@ -4,6 +4,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include "utils/Utils.hpp"
 #include "Request.hpp"
 #include "Logger.hpp"
@@ -30,18 +31,14 @@ public:
 	 * 
 	 * @param socket_fd Descriptor de archivo del socket asociado al cliente.
 	 */
-	Client(int socket_fd, std::time_t wait_time = 1, std::time_t _last_request = std::time(0)) :
-	_socket_fd(socket_fd),
-	_wait_time(wait_time),
-	_last_request(_last_request),
-	_request() {}
+	Client(int socket_fd, std::time_t wait_time = 1, std::time_t _last_request = std::time(0));
 	/**
 	 * @brief Destructor de la clase `Client`.
 	 * 
 	 * Libera los recursos asociados con el cliente. Actualmente no realiza
 	 * ninguna acción explícita.
 	 */
-	~Client() {}
+	~Client();
 	/**
 	 * @brief Obtiene la solicitud (`Request`) del cliente.
 	 * 
@@ -49,9 +46,7 @@ public:
 	 * 
 	 * @return Una copia del objeto `Request` del cliente.
 	 */
-	Request get_request() const {
-		return _request;
-	}
+	Request get_request() const;
 	
 	/**
 	 * @brief Obtiene el descriptor de archivo del socket asociado al cliente.
@@ -61,12 +56,8 @@ public:
 	 * 
 	 * @return El descriptor de archivo del socket asociado al cliente.
 	 */
-	int get_socket_fd() const {
-		return _socket_fd;
-	}
-	void reset_last_request() {
-		_last_request = std::time(0);
-	}
+	int get_socket_fd() const;
+	void reset_last_request();
 	/**
 	 * @brief Método para recibir datos desde un socket y procesar la solicitud recibida.
 	 * 
@@ -77,24 +68,7 @@ public:
 	 * @return true Si se reciben datos correctamente y se procesan.
 	 * @return false Si el cliente se desconecta o no se reciben datos.
 	 */
-	int receive_data() {
-		char buffer[8192];
-		int bytes_received = recv(_socket_fd, buffer, sizeof(buffer), 0);
-		if (bytes_received > 0) {
-			Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
-			_request.parse_request(buffer, bytes_received);
-			if (_request.get_header_by_key("Connection") == "close") {
-				Logger::log(Logger::INFO, "Client.cpp", "El cliente pidio desconectarse, client_fd: " + to_string(_socket_fd));
-				return 1;
-			}
-			reset_last_request();
-			return 0;
-		} else {
-			// Cliente desconectado
-			Logger::log(Logger::ERROR, "Client.cpp", "ERROR: Cliente desconectado, socket fd" + to_string(_socket_fd));
-			return -1;
-		}
-	}
+	int receive_data();
 	/**
 	 * @brief Envía una respuesta al cliente a través del socket y cierra la conexión.
 	 * 
@@ -104,12 +78,7 @@ public:
 	 * 
 	 * @param response Referencia a un objeto `std::string` que contiene la respuesta a enviar.
 	 */
-	void send_response(std::string &response) {
-		if (!response.empty()) {
-			Logger::log(Logger::INFO, "Client.cpp", response.substr(0, response.find("\n")));
-			send(_socket_fd, response.c_str(), response.size(), 0);
-		}
-	}
+	void send_response(std::string &response);
 	/**
 	 * @brief Envía un mensaje de error HTTP al cliente y cierra la conexión.
 	 * 
@@ -120,13 +89,8 @@ public:
 	 * @param code Código de error HTTP que indica el tipo de error (por ejemplo, 404, 500).
 	 * @param message Mensaje de error que describe el motivo del error (por ejemplo, "Not Found", "Internal Server Error").
 	 */
-	void send_error(int code, const std::string& message) {
-		std::string response = "HTTP/1.1 " + to_string(code) + " " + message + "\r\n\r\n";
-		send(_socket_fd, response.c_str(), response.size(), 0);
-	}
-	bool has_client_timed_out() {
-		return (std::time(0) - _last_request) > _wait_time;
-	}
+	void send_error(int code, const std::string& message);
+	bool has_client_timed_out();
 };
 
 #endif
