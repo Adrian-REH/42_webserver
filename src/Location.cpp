@@ -43,6 +43,11 @@ Location &Location::set_redirect_url(const std::string &str) {
 	return *this;
 }
 
+Location &Location::set_limit_except(LimitExcept &l) {
+	_limit_except = l;
+	return *this;
+}
+
 std::string Location::get_path() const {
 	return _path;
 }
@@ -50,8 +55,11 @@ int Location::get_auto_index() const {
 	return _auto_index;
 }
 std::vector<std::string> Location::get_files() const {
-	std::cout << "[ERROR] EOOOO "  << _files.size() << std::endl;
 	return _files;
+}
+
+LimitExcept Location::get_limit_except() const {
+	return _limit_except;
 }
 
 Location Location::build() {
@@ -91,7 +99,6 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 	if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
 		std::string path_tmp  = extractStrStart(path, "/");
 		file = extractStrEnd(path, path_tmp); //extractStrEnd
-		std::cout << "[DEBUG] path_tmp: '" << path_tmp <<"' file " << file<< std::endl;
 		path = path_tmp;
 	}
 	
@@ -106,15 +113,11 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 
 	// If directory doesn't exist, it will throw an exception
 	_files = get_all_dirs(dir); // TODO: Adjust for directories without leading '/'
-	std::cout << "[ERROR] _files retunr "  << _files.size() << std::endl;
 	for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
-		std::cout << "[DEBUG] it "<< *it<< std::endl;
 		if (!file.empty() && ends_with(file, *it)) {
-			std::cout << "[DEBUG] por aqui "<< std::endl;
 			return final_path = buildFullPath(dir, "", *it), 0;
 		} 
 		/*else if (*it == _index){
-			std::cout << "[DEBUG] por aca "<< std::endl;
 			return final_path = buildFullPath(dir, "", _index), 0;
 		}*/
 			

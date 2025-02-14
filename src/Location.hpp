@@ -96,11 +96,15 @@ class Location {
 		 */
 		Location &set_redirect_url(const std::string &str);
 
+		Location &set_limit_except(LimitExcept &l);
+
 		std::string get_path() const;
 
 		int get_auto_index() const;
 
 		std::vector<std::string> get_files() const;
+
+		LimitExcept get_limit_except() const;
 		/**
 		 * @brief Finalize the configuration and build the Location object.
 		 * 

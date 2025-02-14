@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <sys/wait.h>
+#include <map>
 #include "utils/Utils.hpp"
 #include "Logger.hpp"
 
@@ -37,6 +38,7 @@ class CGI {
 		 */
 		std::string determine_interpreter() const;
 
+		int parse_request_details(std::map<std::string, std::string> headers);
 		/**
 		 * @brief Ejecuta el script CGI y devuelve su salida.
 		 * 

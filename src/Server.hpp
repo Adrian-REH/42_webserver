@@ -79,6 +79,7 @@ private:
 	std::string _server_name;
 	std::map<int, Client*> _clients;
 	std::vector<Location> _locations;
+	std::map<int, std::string> _error_pages;
 	int _socket_fd;
 	size_t _max_clients;
 
@@ -97,8 +98,10 @@ public:
 	Server &setSocketFd(const int &sock_fd);
 	Server &setServerName(const std::string &server_name);
 	Server &setMaxClients(const int &max_cients);
+	Server &set_error_page(const int &code, std::string index);
 	Server &addLocation(const Location &location);
 	Server &addClient(const Client &cli);
+	std::string get_error_page_by_key(const int &key);
 	int getSocketFd() const;
 	int getPort() const;
 	void deleteClient(const int client_fd);

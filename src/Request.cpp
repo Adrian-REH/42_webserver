@@ -50,13 +50,68 @@ void Request::parse_headers(const std::string& headers_section) {
  * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
  */
 void Request::parse_body(const std::string& body_section, unsigned long content_length) {
+	std::cout << "parse_body '" << std::endl;
 	if (body_section.size() != (size_t)content_length) {
 		throw std::runtime_error("Body size mismatch with Content-Length.");
 	}
-	_body = body_section;
+	//_body = body_section;
 }
 
-Request::Request(): _method(""), _path(""), _protocol(""), _body("") {}
+void Request::receiving_headers()
+{
+	
+	size_t header_end = _raw_req.find("\r\n\r\n");
+	std::cout << "header_end : '" << header_end << "' size: " << _raw_req.size() << std::endl;
+	if (header_end == std::string::npos) {
+		_state = RECEIVING_HEADERS;
+		std::cout << "RECEIVING_HEADERS '" << std::endl;
+		return ;//throw std::runtime_error("Malformed request: missing header-body separator.");
+	}
+	std::string start_line = _raw_req.substr(0, _raw_req.find("\r\n"));
+	std::string headers_section = _raw_req.substr(_raw_req.find("\r\n") + 2, header_end - _raw_req.find("\r\n") - 2);
+	parse_start_line(start_line);
+	parse_headers(headers_section);
+
+	_state = RECEIVING_BODY;
+	std::cout << "RECEIVING_BODY '" << std::endl;
+	receiving_body(_raw_req.substr(header_end + 4));
+}
+
+void Request::receiving_body(std::string body_section) {
+	
+	_body += body_section;
+	if (_method == "GET" )
+	{
+		_state = DONE;
+		return ;
+	}
+	std::cout << "_body '" <<  _body<< "'    , '" << _body.substr(0, _body.find("\r\n")) << "' " << std::endl;
+	//TODO: fix reading header "Transfer-Encoding"
+	//std::cout << "_headers '" <<_headers["Transfer-Encoding"] << ",,,," <<std::endl;
+	if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
+		char *endp = NULL;
+		unsigned long content_length = strtol(_headers[CONTENT_LENGTH].c_str(), &endp, 10);
+		parse_body(_body, content_length);
+		std::cout << "DONE REQ '" << std::endl;
+		_state = DONE;
+	} else if (_headers.find("Transfer-Encoding") != _headers.end() && _state < DONE && _headers["Transfer-Encoding"] == "chunked")
+	{	
+		std::cout << "ENTRAAA" << std::endl;
+		std::string size = _body.substr(0, _raw_req.find("\r\n"));
+		unsigned long content_length = 0;
+
+		std::stringstream stream;
+
+		stream << size;
+   		stream >> content_length;
+
+		parse_body(_body.substr(_raw_req.find("\r\n") + 2), content_length);
+		_state = DONE;
+	}
+	//Transfer-Encoding: chunked
+}
+
+Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""), _state(INIT) {}
 
 /**
  * @brief Analiza una solicitud HTTP a partir de un buffer.
@@ -67,25 +122,24 @@ Request::Request(): _method(""), _path(""), _protocol(""), _body("") {}
  * @param req String que contiene la solicitud HTTP.
  * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
  */
-void Request::parse_request(std::string req) {
+void Request::handle_request(std::string req) {
 	//size_t content_length = 0; TODO: usar
-	//std::cout << "FULL REQUEST" << std::endl;
-	//std::cout << req << std::endl;
-	size_t header_end = req.find("\r\n\r\n");
-	if (header_end == std::string::npos) {
-		throw std::runtime_error("Malformed request: missing header-body separator.");
-	}
-	std::string start_line = req.substr(0, req.find("\r\n"));
-	std::string headers_section = req.substr(req.find("\r\n") + 2, header_end - req.find("\r\n") - 2);
-	std::string body_section = req.substr(header_end + 4);
+	std::cout << "FULL REQUEST" << std::endl;
+	std::cout << req << std::endl;
+	
 
-	parse_start_line(start_line);
-	parse_headers(headers_section);
-	if (_headers.find(CONTENT_LENGTH) != _headers.end()) {
-		char *endp = NULL;
-		unsigned long content_length = strtol(_headers[CONTENT_LENGTH].c_str(), &endp, 10);
-		parse_body(body_section, content_length);
+	if (_state == INIT || _state == RECEIVING_HEADERS) {
+		_raw_req += req;
+		receiving_headers();
+	} else if (_state == RECEIVING_BODY) {
+		receiving_body(req);
 	}
+	//TODO: Controlar si está DONE?
+}
+
+
+void Request::set_state(int state) {
+	_state = state;
 }
 
 std::string Request::get_path() const {
@@ -104,8 +158,16 @@ std::string Request::get_body() const {
 	return _body;
 }
 
+int Request::get_state() const {
+	return _state;
+}
+
 std::string Request::get_header_by_key(const std::string &key) {
 	return _headers[key];
+}
+
+std::map<std::string, std::string> Request::get_headers() const {
+	return _headers;
 }
 
 void Request::display_header() {

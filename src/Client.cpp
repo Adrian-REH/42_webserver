@@ -60,6 +60,7 @@ int Client::receive_data() {
 	std::string request_data;
 	int bytes_received;
 
+	_request.set_state(0);
 	// TODO: further look into the return values of recv
 	while (true) {
 		bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
@@ -77,13 +78,13 @@ int Client::receive_data() {
 		}
 		else {
 			std::cerr << to_string(errno) << " " <<strerror(errno) << std::endl;
-			Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
 			if (!request_data.empty())
 				break;
+			Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
 			return -1;
 		}
 	}
-	_request.parse_request(request_data);
+	_request.handle_request(request_data);
 	return 0;
 }
 /*if (bytes_received > 0) {

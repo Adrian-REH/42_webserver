@@ -5,6 +5,8 @@
 #include "utils/Utils.hpp"
 #include "Logger.hpp"
 
+
+
 /**
  * @class Request
  * @brief Representa una solicitud HTTP con funcionalidad para analizarla.
@@ -14,11 +16,16 @@
  */
 class Request {
 	private:
+		std::string _raw_req;
 		std::string _method;
 		std::string _path;
 		std::string _protocol;
 		std::string _body;
 		std::map<std::string, std::string> _headers;
+		int _state;
+		enum { INIT, RECEIVING_HEADERS, RECEIVING_BODY, DONE };
+		void receiving_headers();
+		void receiving_body(std::string body_section);
 		/**
 		 * @brief Analiza la línea inicial de la solicitud.
 		 * 
@@ -54,12 +61,16 @@ class Request {
 		 * @param req String que contiene la solicitud HTTP.
 		 * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
 		 */
-		void parse_request(std::string req);
+		void handle_request(std::string req);
+		void set_state(int state);
+		int process_request();
 		std::string get_path() const;
 		std::string get_method() const;
 		std::string get_protocol() const;
 		std::string get_body() const;
+		int get_state() const;
 		std::string get_header_by_key(const std::string &key);
+		std::map<std::string, std::string> get_headers() const;
 		void display_header();
 };
 #endif

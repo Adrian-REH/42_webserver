@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <ctime>  // Para time_t
 #include <string>
-#include <unistd.h>//TODO: borrar
+#include <unistd.h>
 #include <vector>
 #include <set>
 #include <dirent.h> // Para opendir, readdir, closedir

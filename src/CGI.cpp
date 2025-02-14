@@ -22,8 +22,24 @@ std::string CGI::determine_interpreter() const {
 		throw std::runtime_error("Unsupported script type: " + _script_path);
 	}
 }
+
+int CGI::parse_request_details(std::map<std::string, std::string> headers) {
+	//Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryExBsdaWEWoLMf00z
+	std::deque<std::string>	content_type =  split(headers["Content-Type"], ';');
+	std::string boundary;
+	std::cout <<  "'" << strtrim(content_type[0]) <<  "'"<< std::endl;
+	if (_method == "POST" && strtrim(content_type[0]) == "multipart/form-data")
+	{
+		boundary = split(content_type[1], '=')[1];
+		_body = extractStrBetween(_body, boundary, boundary);
+	}
+	
+	return 0;
+}
 /**
  * @brief Ejecuta el script CGI y devuelve su salida.
+ * 
+ * 
  * 
  * Crea un proceso hijo que ejecuta el script CGI utilizando el intérprete correspondiente.
  * Captura la salida del script y la devuelve como una respuesta HTTP.
