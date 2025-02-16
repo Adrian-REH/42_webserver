@@ -18,9 +18,10 @@
 class Client {
 private:
 	int _socket_fd;
-	size_t _wait_time;
 	size_t _last_request;
+	size_t _n_request;
 	Request _request;
+	//Response _response;
 
 public:
 	/**
@@ -31,7 +32,7 @@ public:
 	 * 
 	 * @param socket_fd Descriptor de archivo del socket asociado al cliente.
 	 */
-	Client(int socket_fd, std::time_t wait_time = 1, std::time_t _last_request = std::time(0));
+	Client(int socket_fd, std::time_t _last_request = std::time(0), size_t n_req = 0);
 	/**
 	 * @brief Destructor de la clase `Client`.
 	 * 
@@ -90,7 +91,8 @@ public:
 	 * @param message Mensaje de error que describe el motivo del error (por ejemplo, "Not Found", "Internal Server Error").
 	 */
 	void send_error(int code, const std::string& message);
-	bool has_client_timed_out();
+	size_t  has_client_timed_out();
+	bool  has_max_req(size_t n_req);
 };
 
 #endif

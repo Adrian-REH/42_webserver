@@ -11,8 +11,8 @@
  * 
  * @param socket_fd Descriptor de archivo del socket asociado al cliente.
  */
-Client::Client(int socket_fd, std::time_t wait_time, std::time_t _last_request) :_socket_fd(socket_fd), _wait_time(wait_time),
-	_last_request(_last_request), _request() {}
+Client::Client(int socket_fd, std::time_t _last_request, size_t n_req) :_socket_fd(socket_fd),
+	_last_request(_last_request), _n_request(n_req),_request() {}
 /**
  * @brief Destructor de la clase `Client`.
  * 
@@ -131,7 +131,10 @@ void Client::send_error(int code, const std::string& message) {
 	send(_socket_fd, response.c_str(), response.size(), 0);
 }
 
-bool Client::has_client_timed_out() {
-	return (std::time(0) - _last_request) > _wait_time;
+size_t  Client::has_client_timed_out() {
+	return (std::time(0) - _last_request);
 }
 
+bool  Client::has_max_req(size_t n_req) {
+	return  _n_request > n_req;
+}

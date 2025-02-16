@@ -82,6 +82,8 @@ private:
 	std::map<int, std::string> _error_pages;
 	int _socket_fd;
 	size_t _max_clients;
+	size_t _timeout;
+	size_t _max_req;
 
 	//int epoll_fd;
 	//size_t _env_len;
@@ -93,7 +95,7 @@ private:
 public:
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
-	Server(int port = 8080, size_t max_clients = 10);
+	Server(int port = 8080, size_t max_clients = 10, size_t timeout = 1, size_t max_req = 100);
 	Server &set_port(const int &port);
 	Server &setSocketFd(const int &sock_fd);
 	Server &setServerName(const std::string &server_name);
@@ -109,7 +111,7 @@ public:
 	bool hasClientTimedOut(const int key_client_fd) {
 		std::map<int, Client*>::iterator it = _clients.find(key_client_fd);
 		if (it != _clients.end())
-			return it->second->has_client_timed_out();
+			return it->second->has_client_timed_out() > _timeout;
 		return false;
 	}
 	std::string getServerName() const;

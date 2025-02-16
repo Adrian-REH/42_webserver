@@ -29,12 +29,14 @@ void Request::parse_headers(const std::string& headers_section) {
 	std::string line;
 	//TODO: Error with parser header example: Cookie : session_id=14332Content-Type: text/html
 	//Itero linea a linea buscando : para parsear key value to map
+	Logger::log(Logger::DEBUG, "Request.cpp", "Request Header:");
 	while (std::getline(stream, line) && line != "\r") {
 		size_t colon_pos = line.find(": ");
 		if (colon_pos != std::string::npos) {
 			std::string key = line.substr(0, colon_pos);
 			std::string value = line.substr(colon_pos + 2);
 			_headers[key] = value;
+			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
 	}
 	//Si es importante algun header, como el HOST entonces doy error si no lo encuentro
@@ -124,8 +126,8 @@ Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body("
  */
 void Request::handle_request(std::string req) {
 	//size_t content_length = 0; TODO: usar
-	std::cout << "FULL REQUEST" << std::endl;
-	std::cout << req << std::endl;
+	//std::cout << "FULL REQUEST" << std::endl;
+	//std::cout << req << std::endl;
 	
 
 	if (_state == INIT || _state == RECEIVING_HEADERS) {

@@ -1,8 +1,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
-#include "Response.hpp"
 
-Server::Server(int port, size_t max_clients) : _port(port), _max_clients(max_clients) { //,_max_clients(max_clients), _env_len(0){
+Server::Server(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) { //,_max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const int &port) {
@@ -224,18 +223,22 @@ void Server::execute(Client &client) {
 		Logger::log(Logger::INFO,"Server.cpp", "Starting CGI execution.");
 		std::string rs;
 		std::string rs_start_line = "HTTP/1.1 200 OK\r\n";
-		Logger::log(Logger::DEBUG,"Server.cpp", "Request details: method:  " + method + ", path: " + path + ", body size: " + to_string(body.size()) + "bytes");
+		Logger::log(Logger::DEBUG,"Server.cpp", "Request details: method: '" + method + "', path: '" + path + "', body size: " + to_string(body.size()) + "bytes");
 		std::vector<Location>::iterator it;
 		std::map<std::string, Location>::iterator it_map;
 		bool is_cgi = false;
 		std::string path_tmp;
 		
-		
+		//Rechazar u Aceptar Keep-Alive:
+		if (_timeout > 0 && req.get_header_by_key("Connection").compare("keep-alive") && !client.has_max_req(_max_req) ) {
+			rs_start_line.append("Connection: Keep-Alive\r\n");
+			rs_start_line.append("Keep-Alive: timeout=" + to_string(_timeout) + ", " + "max= " + to_string(_max_req) + "\r\n");
+		}
 		for (it = _locations.begin(); it != _locations.end(); it++) {
-			std::cout << path << " " << it->get_path() << std::endl;
+			Logger::log(Logger::DEBUG,"Server.cpp","urlRel:" + path + ", loc_path:" + it->get_path());
 			if (starts_with(path, it->get_path()))
 			{
-				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());		
+				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());
 				try {
 
 					if (it->findScriptPath(path, path_tmp) == 0)
@@ -249,15 +252,13 @@ void Server::execute(Client &client) {
 				} catch (const std::exception &e) {
 					std::cerr << "[ERROR] Exception: " << e.what() << std::endl;
 				}
-				
-				
 			}
 		}
 
-		if (!it->get_limit_except().isMethodAllowed(method))
+		if (it != _locations.end() && !it->get_limit_except().isMethodAllowed(method))
 		{
-			//get_error_page_by_key();
 			Logger::log(Logger::INFO,"Server.cpp", "Method not allowe: " + method);
+			//Llamar a una clase que aloje todos los errores: HttpStatusStore
 			std::ifstream	inFile("html/404.html");
 			if (!inFile)
 				std::cout << "ERROR inFile"<<std::endl;
@@ -265,20 +266,16 @@ void Server::execute(Client &client) {
 			rs = "HTTP/1.1 405 Method Not Allowed\nContent-Type: text/html\r\n\r\n";
 			while (std::getline(inFile, line))
 				rs += line + "\n";
-			
 			inFile.close();
 			client.send_response(rs);
 			return ;
 		}
 
-		std::cout << "path de loc " <<it->get_path() <<std::endl;
 		if (ends_with(path_tmp, ".html"))
 		{
 			path_tmp.erase(0,1);
 			Logger::log(Logger::INFO,"Server.cpp", "HTML file: " + path_tmp);
 			
-			
-
 			std::ifstream	inFile(path_tmp.c_str());
 			if (!inFile)
 				std::cout << "ERROR inFile"<<std::endl;
@@ -291,7 +288,6 @@ void Server::execute(Client &client) {
 		}
 		else
 		{
-
 			size_t dot_pos = path_tmp.rfind('.');
 			if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
 			{
@@ -316,7 +312,6 @@ void Server::execute(Client &client) {
 			}
 		
 		}
-				
 
 		//Capturar el id de la Cookie y resolver sus datos, para enviarlo al CGI
 		std::string cookie_val = req.get_header_by_key("Cookie");

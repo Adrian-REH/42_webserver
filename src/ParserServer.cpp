@@ -139,6 +139,10 @@ std::vector<Server> ParserServer::execute(char **env) {
 	.set_port(8080)
 	.addLocation(Location()
 		.set_path("/cgi-bin/")
+		.set_limit_except(LimitExcept()
+			.addAllowedMethod("GET")
+			.addAllowedMethod("POST")
+		)
 		.set_auto_index(true)
 		.set_root_directory("/cgi-bin")
 		.set_index("login.py")
@@ -146,6 +150,8 @@ std::vector<Server> ParserServer::execute(char **env) {
 	Server s;
 	s.set_port(8081);
 	s.addLocation(Location()
+		.set_limit_except(LimitExcept()
+			.addAllowedMethod("GET"))
 		.set_path("/")
 		.set_auto_index(true)
 		.set_root_directory("/html")
