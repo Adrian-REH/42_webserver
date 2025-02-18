@@ -34,7 +34,7 @@ void Request::parse_headers(const std::string& headers_section) {
 		size_t colon_pos = line.find(": ");
 		if (colon_pos != std::string::npos) {
 			std::string key = line.substr(0, colon_pos);
-			std::string value = line.substr(colon_pos + 2);
+			std::string value = strtrim(line.substr(colon_pos + 2));
 			_headers[key] = value;
 			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
@@ -52,7 +52,8 @@ void Request::parse_headers(const std::string& headers_section) {
  * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
  */
 void Request::parse_body(const std::string& body_section, unsigned long content_length) {
-	std::cout << "parse_body '" << std::endl;
+	std::cout << "body_section size: " <<body_section.size() << std::endl;
+	std::cout << "parse_body : "<< body_section << std::endl;
 	if (body_section.size() != (size_t)content_length) {
 		throw std::runtime_error("Body size mismatch with Content-Length.");
 	}
@@ -87,30 +88,81 @@ void Request::receiving_body(std::string body_section) {
 		_state = DONE;
 		return ;
 	}
-	std::cout << "_body '" <<  _body<< "'    , '" << _body.substr(0, _body.find("\r\n")) << "' " << std::endl;
-	//TODO: fix reading header "Transfer-Encoding"
-	//std::cout << "_headers '" <<_headers["Transfer-Encoding"] << ",,,," <<std::endl;
+
+	std::cout << "_body '" <<  _body<< "'" << std::endl;
+	if (_body.empty())
+		return ;
+	
+	//std::cout << _body.substr(0, _body.find("\r\n")) << "" <<_body.substr(_body.find("\r\n") + 2).find("\r\n") << "' " << std::endl;
+	std::cout << "_headers '" <<_headers["Transfer-Encoding"] << "'" <<std::endl;
 	if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
-		char *endp = NULL;
-		unsigned long content_length = strtol(_headers[CONTENT_LENGTH].c_str(), &endp, 10);
+		//TODO: use content length to verify if body size matches 
+		unsigned long content_length = to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
 		std::cout << "DONE REQ '" << std::endl;
 		_state = DONE;
-	} else if (_headers.find("Transfer-Encoding") != _headers.end() && _state < DONE && _headers["Transfer-Encoding"] == "chunked")
-	{	
-		std::cout << "ENTRAAA" << std::endl;
-		std::string size = _body.substr(0, _raw_req.find("\r\n"));
-		unsigned long content_length = 0;
+	} else if (_headers.find("Transfer-Encoding") != _headers.end() && _state < DONE && strtrim(_headers["Transfer-Encoding"]) == "chunked") {	
+		read_chunked_body();
+	} else {
 
-		std::stringstream stream;
-
-		stream << size;
-   		stream >> content_length;
-
-		parse_body(_body.substr(_raw_req.find("\r\n") + 2), content_length);
-		_state = DONE;
 	}
-	//Transfer-Encoding: chunked
+	/**
+	 *  the server SHOULD respond with 400 (bad request) if it cannot
+	 * determine the length of the message, or with 411 (length required) if
+	 * it wishes to insist on receiving a valid Content-Length.
+	 * 
+	 *  Messages MUST NOT include both a Content-Length header field and a 
+	 * non-identity transfer-coding. If the message does include a non-identity 
+	 * transfer-coding, the Content-Length MUST be ignored.
+
+	 * When a Content-Length is given in a message where a message-body is
+	 * allowed, its field value MUST exactly match the number of OCTETs in
+	 * the message-body. HTTP/1.1 user agents MUST notify the user when an
+	 * invalid length is received and detected.
+	 * 
+	 * 
+	 */
+	 
+}
+
+void Request::read_chunked_body() {
+	std::istringstream stream(_body);
+	std::string line;
+	unsigned long chunk_size;
+	std::string size;
+	bool is_size_line = true;
+
+	while (std::getline(stream, line) && line != "\r") {
+		if (is_size_line)
+		{
+			size = line.substr(0, line.find("\r"));
+			if (size.empty())
+			{
+				std::cout << "size.empty" << std::endl;
+				return ;
+			}
+			//std::cout << "size " << size << std::endl;
+			// Read body chunk
+			chunk_size = to_hex_ulong(size);
+			std::getline(stream, line);
+		}
+		
+		//std::cout << "chunk_size " << chunk_size << std::endl;
+
+		if (chunk_size == 0 && line.substr(0, line.find("\r")).size() == chunk_size)
+		{
+			//ENDING OF BODY
+			_state = DONE;
+			std::cout << "DONE CHUNKED BODY " << size << std::endl;
+			return ;
+		} else if (line.substr(0, line.find("\r")).size() < chunk_size)
+		{
+			//KEEP READING BYTES
+			is_size_line = false;
+			chunk_size -= line.substr(0, line.find("\r")).size() - 2;
+		} else if (line.substr(0, line.find("\r")).size() > chunk_size)
+			throw std::runtime_error("Body chunk of wrong size.");
+	}
 }
 
 Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""), _state(INIT) {}
@@ -126,8 +178,8 @@ Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body("
  */
 void Request::handle_request(std::string req) {
 	//size_t content_length = 0; TODO: usar
-	//std::cout << "FULL REQUEST" << std::endl;
-	//std::cout << req << std::endl;
+	std::cout << "FULL REQUEST" << std::endl;
+	std::cout << req << "||" << std::endl;
 	
 
 	if (_state == INIT || _state == RECEIVING_HEADERS) {

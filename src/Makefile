@@ -19,7 +19,7 @@ SRCS = main.cpp Server.cpp HttpServerManager.cpp Location.cpp \
 	   ParserServer.cpp CGI.cpp Request.cpp Client.cpp\
 	   utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
 	   utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
-	   utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp
+	   utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp
 OBJS = ${SRCS:.cpp=.o}
 
 # Regla por defecto
