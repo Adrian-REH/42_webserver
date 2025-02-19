@@ -24,8 +24,7 @@ class Request {
 		std::map<std::string, std::string> _headers;
 		int _state;
 		enum { INIT, RECEIVING_HEADERS, RECEIVING_BODY, DONE };
-		void receiving_headers();
-		void receiving_body(std::string body_section);
+	
 		/**
 		 * @brief Analiza la línea inicial de la solicitud.
 		 * 
@@ -49,6 +48,10 @@ class Request {
 		 */
 		void parse_body(const std::string& body_section, unsigned long content_length);
 
+		void receiving_headers();
+		void receiving_body(std::string body_section);
+
+		void read_chunked_body();
 	public:
 		Request();
 
@@ -63,7 +66,6 @@ class Request {
 		 */
 		void handle_request(std::string req);
 		void set_state(int state);
-		int process_request();
 		std::string get_path() const;
 		std::string get_method() const;
 		std::string get_protocol() const;

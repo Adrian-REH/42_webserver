@@ -29,5 +29,8 @@ bool						starts_with(const std::string& str, const std::string& prefix);
 std::vector<std::string>	get_all_dirs(const char *dir_path);
 std::string					strtrim(const std::string& str);
 std::string					to_string(int value);
+int							to_int(std::string value);
+unsigned long				to_hex_ulong(std::string value);
+unsigned long				to_dec_ulong(std::string value);
 
 #endif
