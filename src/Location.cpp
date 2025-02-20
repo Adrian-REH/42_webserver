@@ -33,7 +33,7 @@ Location &Location::set_path_upload_directory(const std::string &str) {
 	return *this;
 }
 
-Location &Location::set_client_max_body_size(const int &cli_max_body_size) {
+Location &Location::set_client_max_body_size(const int cli_max_body_size) {
 	_client_max_body_size = cli_max_body_size;
 	return *this;
 }

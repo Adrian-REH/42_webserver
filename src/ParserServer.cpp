@@ -1,9 +1,42 @@
 
 #include "ParserServer.hpp"
+
+
+
+
+
+
+bool hasDuplicates(const std::vector<Location>& locations) {
+    std::set<Location> uniqueLocations;
+    
+    for (std::vector<Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
+        if (!uniqueLocations.insert(*it).second)
+            return true;
+    return false;
+}
+
+ParserServer::ParserServer(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
+
 /*
 typedef < typedef Function>
 std::map<std::string, Function> dictionaryParser
 */
+
+
+void ParserServer::init_automata() {
+	_automata_srv["listen "].setSetter(&Server::set_port, Setter<Server>::SIZE_T);
+	_automata_srv["server_name "].setSetter(&Server::set_server_name, Setter<Server>::STRING);
+	_automata_srv["keepalive_timeout "].setSetter(&Server::set_timeout, Setter<Server>::SIZE_T);
+	_automata_srv["keepalive_requests "].setSetter(&Server::set_max_req, Setter<Server>::SIZE_T);
+
+	_automata_loc["return "].setSetter(&Location::set_redirect_url, Setter<Location>::STRING);
+	_automata_loc["index "].setSetter(&Location::set_index, Setter<Location>::STRING);
+	_automata_loc["root "].setSetter(&Location::set_root_directory, Setter<Location>::STRING);
+	_automata_loc["client_max_body_size "].setSetter(&Location::set_client_max_body_size, Setter<Location>::INT);
+	_automata_loc["upload_store "].setSetter(&Location::set_path_upload_directory, Setter<Location>::STRING);
+
+}
+
 LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	LimitExcept limExc;
 	size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
@@ -13,107 +46,108 @@ LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it
 	std::deque<std::string>::iterator its;
 	for (its = methods.begin(); its != methods.end(); its++)
 		limExc.addAllowedMethod(*its);
-	for (++it; it != end; ++it) {
+	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
 		if (line.find("}") != std::string::npos) { // Fin de limit_except
 			std::cout << line << std::endl;
 			break;
 		}
-		else if (line.find("deny ") != std::string::npos && line.find(";") != std::string::npos) {
-			limExc.setDenyAction(extractStrBetween(line, "deny ", ";"));
+		else if (line.find("deny ") != std::string::npos) {
+			if (line.find(";") != std::string::npos) {
+				limExc.setDenyAction(extractStrBetween(line, "deny ", ";"));
+			} else {
+				throw std::runtime_error("Error no se encontro el ;");
+			}
 			continue ;
 		}
-		//std::cout << line << std::endl; // Procesar línea
 	}
+	/**TODO: Errores
+	 * 	 LimitException Vacio -> limit_except GET {}
+	 */
+	//TODO: SI no hay ciertos datos para LimitExcept que lance un error
 	return limExc;
 }
 
 Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	Location loc;
+	std::map<std::string, Setter<Location> >::iterator aut_it;
 	loc.set_path(extractStrBetween(*it, "location ", " {"));
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
 		if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
 			std::cout << line << std::endl;
-			loc.set_limit_except(parseLimitExcept(it, end));
+			LimitExcept limExp = parseLimitExcept(it, end);
+			loc.set_limit_except(limExp);
 		} else if (line.find("}") != std::string::npos) { // Fin de location
 			std::cout << line << std::endl;
 			return loc;
 		} else {
 			std::cout << line << std::endl;
-			if (line.find("index ") != std::string::npos && line.find(";") != std::string::npos){
-				loc.set_index(extractStrBetween(line, "index ", ";"));
-				continue;
-			}
-			if (line.find("root ") != std::string::npos && line.find(";") != std::string::npos){
-				loc.set_root_directory(extractStrBetween(line, "root ", ";"));
-				loc.build();
-				continue ;
-			}
 			if (line.find("autoindex ") != std::string::npos && line.find(";") != std::string::npos){
 				loc.set_auto_index(line.find("on") != std::string::npos);
 				continue ;
 			}
-			if (line.find("client_max_body_size ") != std::string::npos && line.find("M;") != std::string::npos){
-				char *endp = NULL;
-				loc.set_client_max_body_size(static_cast<int>(strtod(extractStrBetween(line, "client_max_body_size ", "M;").c_str(), &endp)));
-				continue;
-			}
-			if (line.find("upload_store ") != std::string::npos && line.find(";") != std::string::npos){
-				loc.set_path_upload_directory(extractStrBetween(line, "upload_store ", ";"));
-				continue;
+			for (aut_it = _automata_loc.begin(); aut_it != _automata_loc.end(); aut_it++){
+				if (line.find(aut_it->first) != std::string::npos){
+					if (aut_it != _automata_loc.end()) {
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						std::string val = extractStrBetween(line, aut_it->first, ";");
+						aut_it->second.execute(loc, val);
+					}
+					break;
+				}
 			}
 			//TODO: Tratar los permisos de path_upload_directory
-			if (line.find("return ") != std::string::npos && line.find(";") != std::string::npos){
-				loc.set_redirect_url(extractStrBetween(line, "return ", ";"));
-				continue;
-			}
 		}
 	}
+	if (loc.get_path().empty())
+		throw std::runtime_error("Error en la configuracion de Location");
+	/* TODO:
+	Errores comunes:
+	 Falta de un -> ;
+	 Si Location {} no contiene directivas dentro
+	*/
+	//TODO: SI no hay ciertos datos para Location que lance un error
 	return loc;
 }
 
+
 Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	Server srv;
+	std::map<std::string, Setter<Server> >::iterator aut_it;
+
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
 		if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
 			std::cout << line << std::endl;
-			srv.addLocation(parseLocation(it, end));
+			Location loc = parseLocation(it, end);
+			srv.addLocation(loc);
 		} else if (line.find("}") != std::string::npos) { // Fin de server
 			std::cout << line << std::endl;
 			return srv;
 		} else {
-			if (line.find("listen ") != std::string::npos && line.find(";") != std::string::npos) {
-				char *endp;
-				std::string port = extractStrBetween(line, "listen ", ";");
-				srv.set_port(static_cast<int>(std::strtod(port.c_str(), &endp)));
-				continue ;
+			for (aut_it = _automata_srv.begin(); aut_it!= _automata_srv.end(); aut_it++) {
+				if (line.find(aut_it->first) != std::string::npos) {
+					if (aut_it != _automata_srv.end()) {
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						std::string val = extractStrBetween(line, aut_it->first, ";");
+						//srv.set_port(8080);
+
+						aut_it->second.execute(srv, val);
+					}
+					break;
+				}
 			}
-			if (line.find("server_name ") != std::string::npos && line.find(";") != std::string::npos) {
-				//char *endp; TODO
-				//srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
-				continue ;
-			}
-			if (line.find("keepalive_timeout ") != std::string::npos && line.find(";") != std::string::npos) {
-				//char *endp; TODO
-				//srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
-				continue ;
-			}
-			if (line.find("keepalive_requestsz ") != std::string::npos && line.find(";") != std::string::npos) {
-				//char *endp; TODO
-				//srv.set_server_name(extractStrBetween(line, "server_name ", ";"));
-				continue ;
-			}
-			//TODO: Agregar los timeout de keep-alive
-			//std::cout << line << std::endl; // Procesar línea
-			//Identificar propiedades de Server y procesarlo. srv.set_propertie
+		
 		}
 	}
+	std::vector<Location> locs = srv.get_locations();
+	if (srv.getPort() ==0  || srv.get_server_name().empty() || locs.empty() || hasDuplicates(locs))
+		throw std::runtime_error("Error en la configuracion de Srv");
 	return srv;
+
 }
 
-ParserServer::ParserServer(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
 
 int ParserServer::dumpRawData(const char *file_name)
 {
@@ -128,11 +162,13 @@ int ParserServer::dumpRawData(const char *file_name)
 }
 
 /**
- * @brief Busco en el archivo la configuracion necesaria para Server
+ * @brief Itero sobre _content_file y parseando el contenido a configuracion del server
+ * Cliente o LimitException, para el funcionamiento del programa
  */
 std::vector<Server> ParserServer::execute(char **env) {
 	std::vector<Server> srvs;
 	std::deque<std::string>::iterator it;
+	init_automata();
 	(void)env; // FIXME: Se precisa el env para cada ejecucion de CGI?, o es posible hacerlo sin utilizar el ENV que se envie, de igual forma se puede utilizar 
 	if (_content_file.size() <= 0)
 		throw std::runtime_error("Error not config");

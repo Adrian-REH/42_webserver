@@ -4,26 +4,43 @@
 Server::Server(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) { //,_max_clients(max_clients), _env_len(0){
 }
 
-Server &Server::set_port(const int &port) {
+Server &Server::set_max_req(const size_t max_req) {
+	std::cout << "dir: " << this << std::endl;
+
+	if (this->_max_req && max_req)
+		this->_max_req = (max_req > 100) ? 100: max_req;
+	return *this;
+}
+
+Server &Server::set_timeout(const size_t timeout) {
+	std::cout << "dir: " << this << std::endl;
+	if (this->_timeout && timeout)
+	this->_timeout = (timeout > 5) ? 5: timeout;
+	return *this;
+}
+
+Server &Server::set_port(const size_t port) {
+	std::cout << "dir: " << this << std::endl;
+
 	_port=port;
 	return *this;
 }
 
-Server &Server::setSocketFd(const int &sock_fd) {
+Server &Server::setSocketFd(const int sock_fd) {
 	_socket_fd = sock_fd;
 	return *this;
 }
-Server &Server::setServerName(const std::string &server_name) {
+Server &Server::set_server_name(const std::string &server_name) {
 	_server_name = server_name;
 	return *this;
 }
 
-Server &Server::setMaxClients(const int &max_cients) {
+Server &Server::setMaxClients(const int max_cients) {
 	_max_clients = max_cients;
 	return *this;
 }
 
-Server &Server::set_error_page(const int &code, std::string index) {
+Server &Server::set_error_page(const int code, std::string index) {
 	_error_pages[code] = index;
 	return *this;
 }
@@ -38,6 +55,10 @@ Server &Server::addClient(const Client &cli) {
 	return *this;
 }
 
+
+std::vector<Location> Server::get_locations() {
+	return _locations;
+}
 int Server::getSocketFd() const{
 	return _socket_fd;
 }
@@ -50,11 +71,11 @@ int Server::getMaxClients() const{
 	return _max_clients;
 }
 
-std::string Server::getServerName() const {
+std::string Server::get_server_name() const {
 	return _server_name;
 }
 
-std::string Server::get_error_page_by_key(const int &key) {
+std::string Server::get_error_page_by_key(const int key) {
 	return _error_pages[key];
 }
 

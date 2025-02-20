@@ -96,16 +96,20 @@ public:
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
 	Server(int port = 8080, size_t max_clients = 10, size_t timeout = 1, size_t max_req = 100);
-	Server &set_port(const int &port);
-	Server &setSocketFd(const int &sock_fd);
-	Server &setServerName(const std::string &server_name);
-	Server &setMaxClients(const int &max_cients);
-	Server &set_error_page(const int &code, std::string index);
+	Server &set_port(const size_t port);
+	Server &setSocketFd(const int sock_fd);
+	Server &set_server_name(const std::string &server_name);
+	Server &setMaxClients(const int max_cients);
+	Server &set_error_page(const int code, std::string index);
 	Server &addLocation(const Location &location);
 	Server &addClient(const Client &cli);
-	std::string get_error_page_by_key(const int &key);
+	Server &set_timeout(const size_t timeout);
+	Server &set_max_req(const size_t max_req);
+	std::string get_error_page_by_key(const int key);
+	std::vector<Location> get_locations();
 	int getSocketFd() const;
 	int getPort() const;
+	bool location_empty();
 	void deleteClient(const int client_fd);
 	int getMaxClients() const;
 	bool hasClientTimedOut(const int key_client_fd) {
@@ -114,7 +118,7 @@ public:
 			return it->second->has_client_timed_out() > _timeout;
 		return false;
 	}
-	std::string getServerName() const;
+	std::string get_server_name() const;
 	std::pair <Server*, int> accept_connections(int epoll_fd);
 
 };

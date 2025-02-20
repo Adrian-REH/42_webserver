@@ -84,7 +84,7 @@ class Location {
 		 * @param cli_max_body_size The maximum body size allowed for client requests.
 		 * @return A reference to the current Location object for method chaining.
 		 */
-		Location &set_client_max_body_size(const int &cli_max_body_size);
+		Location &set_client_max_body_size(const int cli_max_body_size);
 
 		/**
 		 * @brief Set the redirect URL for this location.
@@ -131,7 +131,9 @@ class Location {
 		 */
 
 		int findScriptPath(const std::string &url_path, std::string &final_path);
-
+		bool operator<(const Location & other) const {
+			return this->get_path() < other.get_path();
+		}
 };
 
 

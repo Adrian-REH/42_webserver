@@ -75,8 +75,6 @@ std::map<int, Server *>::iterator HttpServerManager::deleteClient(int client_fd)
 	return it;
 }
 
-
-
 int HttpServerManager::manageIdleClients(struct epoll_event *events, int nfds) {
 	std::map<int, Server*>::iterator it ;
 	std::map<int, Server*>::iterator it_event ;
@@ -122,7 +120,7 @@ void HttpServerManager::handle_epoll()
 			std::map<int, Server *>::iterator it_cli = _cli_srvs.find(events[i].data.fd);
 
 			if (it_srv != _sock_srvs.end()) {
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server name: " + it_srv->second->getServerName());
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server name: " + it_srv->second->get_server_name());
 				try {
 					std::pair<Server*, int > srv_clifd = it_srv->second->accept_connections(_epoll_fd);
 					if (srv_clifd.second < 0) // No pudo aceptar la conexion
