@@ -278,16 +278,21 @@ void Server::execute(Client &client) {
 
 		if (it != _locations.end() && !it->get_limit_except().isMethodAllowed(method))
 		{
-			Logger::log(Logger::INFO,"Server.cpp", "Method not allowe: " + method);
+			Logger::log(Logger::INFO,"Server.cpp", "Method not allowed: " + method);
+			rs = "HTTP/1.1 405 Method Not Allowed";
 			//Llamar a una clase que aloje todos los errores: HttpStatusStore
-			std::ifstream	inFile("html/404.html");
-			if (!inFile)
-				std::cout << "ERROR inFile"<<std::endl;
-			std::string line;
-			rs = "HTTP/1.1 405 Method Not Allowed\nContent-Type: text/html\r\n\r\n";
-			while (std::getline(inFile, line))
-				rs += line + "\n";
-			inFile.close();
+			if (method != "HEAD")
+			{
+				rs += "\nContent-Type: text/html\r\n\r\n";
+				std::ifstream	inFile("html/405.html");
+				if (!inFile)
+					std::cout << "ERROR inFile"<<std::endl;
+				std::string line;
+				while (std::getline(inFile, line))
+					rs += line + "\n";
+				inFile.close();
+			} else 
+				rs = "\r\n\r\n";
 			client.send_response(rs);
 			return ;
 		}
@@ -297,15 +302,21 @@ void Server::execute(Client &client) {
 			path_tmp.erase(0,1);
 			Logger::log(Logger::INFO,"Server.cpp", "HTML file: " + path_tmp);
 			
-			std::ifstream	inFile(path_tmp.c_str());
-			if (!inFile)
-				std::cout << "ERROR inFile"<<std::endl;
-			std::string line;
+			
 			rs = "Content-Type: text/html\r\n\r\n";
-			while (std::getline(inFile, line))
-				rs += line + "\n";
-			//std::cout << rs << std::endl;
-			inFile.close();
+			if (method != "HEAD")
+			{
+				std::ifstream	inFile(path_tmp.c_str());
+				if (!inFile)
+					std::cout << "ERROR inFile"<<std::endl;
+				std::string line;
+				while (std::getline(inFile, line))
+					rs += line + "\n";
+				//std::cout << rs << std::endl;
+				inFile.close();
+			} else 
+				rs_start_line = "HTTP/1.1 204 No Content\r\n"; 
+			
 		}
 		else
 		{

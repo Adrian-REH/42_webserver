@@ -53,7 +53,7 @@ void Request::parse_headers(const std::string& headers_section) {
  */
 void Request::parse_body(const std::string& body_section, unsigned long content_length) {
 	std::cout << "body_section size: " <<body_section.size() << std::endl;
-	std::cout << "parse_body : "<< body_section << std::endl;
+	std::cout << "content_length : "<< content_length << std::endl;
 	if (body_section.size() != (size_t)content_length) {
 		throw std::runtime_error("Body size mismatch with Content-Length.");
 	}
@@ -83,7 +83,7 @@ void Request::receiving_headers()
 void Request::receiving_body(std::string body_section) {
 	
 	_body += body_section;
-	if (_method == "GET" )
+	if (_method == "GET" || _method == "HEAD" )
 	{
 		_state = DONE;
 		return ;
@@ -94,9 +94,10 @@ void Request::receiving_body(std::string body_section) {
 		return ;
 	
 	//std::cout << _body.substr(0, _body.find("\r\n")) << "" <<_body.substr(_body.find("\r\n") + 2).find("\r\n") << "' " << std::endl;
-	std::cout << "_headers '" <<_headers["Transfer-Encoding"] << "'" <<std::endl;
+	//std::cout << "_headers '" <<_headers[CONTENT_LENGTH] << "'" <<std::endl;
 	if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
 		//TODO: use content length to verify if body size matches 
+		std::cout << "holaaa" << std::endl;
 		unsigned long content_length = to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
 		std::cout << "DONE REQ '" << std::endl;

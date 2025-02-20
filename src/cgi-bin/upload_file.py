@@ -26,24 +26,24 @@ def fbuffer(f, chunk_size=10000):
 
 def main():
 	
-	session_id = verify_session()
+	'''session_id = verify_session()
 	if not session_id:
 		print(f"Set-Cookie: session_id={session_id}")
 		print("Content-Type: text/html\r\n")
 		print("<h1>Error: Sesión invalida</h1>")
-		return 
+		return '''
 	#cgitb.enable()
 	form = cgi.FieldStorage()
 
-	print(f"""Set-Cookie: session_id={session_id}""")
-	if "filename" not in form:
-		print("Content-Type: text/html\r\n")
-		print("<H1>Error: Archivo invalido</H1>")
-		return
+	#print(f"""Set-Cookie: session_id={session_id}""")
+	#if "filename" not in form:
+	#	print("Content-Type: text/html\r\n")
+	#	print("<H1>Error: Archivo invalido</H1>")
+	#	return
 	
 
 	# A nested FieldStorage instance holds the file
-	fileitem = form['filename']
+	fileitem = form['file']
 
 	# Test if the file was uploaded
 	if fileitem.filename:
@@ -60,7 +60,9 @@ def main():
 	else:
 		message = 'No file was uploaded'
 	print("Content-Type: text/html\r\n")
-	print("") 
+	print("")
+	print(f"<H1>Error: Archivo {fileitem}</H1>")
+	
 	print(f"""
 	<!DOCTYPE html>
 	<html lang="es">

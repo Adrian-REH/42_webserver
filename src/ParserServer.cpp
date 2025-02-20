@@ -169,3 +169,5 @@ std::vector<Server> ParserServer::execute(char **env) {
 	}
 	return srvs;
 }
+/* Add allowed methods and search through them to get if its permitted
+*/

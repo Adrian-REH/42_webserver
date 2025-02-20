@@ -28,6 +28,6 @@ unsigned long to_dec_ulong(std::string value) {
     std::stringstream stream;
 
     stream << value;
-    stream >> std::hex >> result;
+    stream >> result;
     return result;
 }

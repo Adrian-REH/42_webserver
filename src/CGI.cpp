@@ -31,7 +31,7 @@ int CGI::parse_request_details(std::map<std::string, std::string> headers) {
 	if (_method == "POST" && strtrim(content_type[0]) == "multipart/form-data")
 	{
 		boundary = split(content_type[1], '=')[1];
-		_body = extractStrBetween(_body, boundary, boundary);
+		_body = extractStrBetween(_body, boundary + "\r\n", boundary + "--\r\n");
 	}
 	
 	return 0;
