@@ -17,25 +17,25 @@ class  LimitExcept {
 			: _allowedMethods(methods.begin(), methods.end()), _denyAction(denyAction) {}
 
 		// Agregar un método permitido
-		LimitExcept addAllowedMethod(const std::string& method) {
+		LimitExcept &addAllowedMethod(const std::string& method) {
 			_allowedMethods.insert(method);
 			return *this;
 		}
 
 		// Configurar acciones de denegación
-		LimitExcept setDenyAction(const std::string& action) {
+		LimitExcept &setDenyAction(const std::string& action) {
 			_denyAction = action;
 			return *this;
 		}
 
 		// Configurar mensaje de log
-		LimitExcept setLogMessage(const std::string& message) {
+		LimitExcept &setLogMessage(const std::string& message) {
 			_logMessage = message;
 			return *this;
 		}
 
 		// Configurar mensaje de autenticación
-		LimitExcept setAuthMessage(const std::string& message) {
+		LimitExcept &setAuthMessage(const std::string& message) {
 			_authMessage = message;
 			return *this;
 		}

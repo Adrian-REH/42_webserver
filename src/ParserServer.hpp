@@ -29,7 +29,7 @@ class Setter {
 		struct SetterType {
 			typedef void (Class::*Type)(T);
 		};
-	    SetterStorage<Class> setter;
+		SetterStorage<Class> setter;
 
 		enum Type { INT, SIZE_T, STRING, BOOL } type;
 
@@ -76,7 +76,7 @@ class Setter {
 					break;
 			}
 		}
-	};
+};
 
 class ParserServer {
 

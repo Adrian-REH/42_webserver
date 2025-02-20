@@ -1,11 +1,6 @@
 
 #include "ParserServer.hpp"
 
-
-
-
-
-
 bool hasDuplicates(const std::vector<Location>& locations) {
     std::set<Location> uniqueLocations;
     
@@ -17,23 +12,20 @@ bool hasDuplicates(const std::vector<Location>& locations) {
 
 ParserServer::ParserServer(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
 
-/*
-typedef < typedef Function>
-std::map<std::string, Function> dictionaryParser
-*/
-
-
 void ParserServer::init_automata() {
 	_automata_srv["listen "].setSetter(&Server::set_port, Setter<Server>::SIZE_T);
 	_automata_srv["server_name "].setSetter(&Server::set_server_name, Setter<Server>::STRING);
 	_automata_srv["keepalive_timeout "].setSetter(&Server::set_timeout, Setter<Server>::SIZE_T);
 	_automata_srv["keepalive_requests "].setSetter(&Server::set_max_req, Setter<Server>::SIZE_T);
 
+	_automata_loc["autoindex "].setSetter(&Location::set_auto_index, Setter<Location>::STRING);
 	_automata_loc["return "].setSetter(&Location::set_redirect_url, Setter<Location>::STRING);
 	_automata_loc["index "].setSetter(&Location::set_index, Setter<Location>::STRING);
 	_automata_loc["root "].setSetter(&Location::set_root_directory, Setter<Location>::STRING);
 	_automata_loc["client_max_body_size "].setSetter(&Location::set_client_max_body_size, Setter<Location>::INT);
 	_automata_loc["upload_store "].setSetter(&Location::set_path_upload_directory, Setter<Location>::STRING);
+	_automata_limexc["deny"].setSetter(&LimitExcept::setDenyAction, Setter<LimitExcept>::STRING);
+
 
 }
 
@@ -42,23 +34,30 @@ LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it
 	size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
 	size_t bracketPos = it->find("{", lmtPos); // Encuentra el '}' después de "limit_except "
 	std::string strmethods = it->substr(lmtPos, bracketPos - lmtPos);
+	std::map<std::string, Setter<LimitExcept> >::iterator aut_it;
 	std::deque<std::string> methods = split(strmethods, ' ');
 	std::deque<std::string>::iterator its;
 	for (its = methods.begin(); its != methods.end(); its++)
 		limExc.addAllowedMethod(*its);
+
+
 	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
 		if (line.find("}") != std::string::npos) { // Fin de limit_except
 			std::cout << line << std::endl;
 			break;
 		}
-		else if (line.find("deny ") != std::string::npos) {
-			if (line.find(";") != std::string::npos) {
-				limExc.setDenyAction(extractStrBetween(line, "deny ", ";"));
-			} else {
-				throw std::runtime_error("Error no se encontro el ;");
+		else {
+			for (aut_it = _automata_limexc.begin(); aut_it != _automata_limexc.end(); aut_it++){
+				if (line.find(aut_it->first) != std::string::npos){
+					if (aut_it != _automata_limexc.end()) {
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						std::string val = extractStrBetween(line, aut_it->first, ";");
+						aut_it->second.execute(limExc, val);
+					}
+					break;
+				}
 			}
-			continue ;
 		}
 	}
 	/**TODO: Errores
@@ -83,10 +82,7 @@ Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std:
 			return loc;
 		} else {
 			std::cout << line << std::endl;
-			if (line.find("autoindex ") != std::string::npos && line.find(";") != std::string::npos){
-				loc.set_auto_index(line.find("on") != std::string::npos);
-				continue ;
-			}
+
 			for (aut_it = _automata_loc.begin(); aut_it != _automata_loc.end(); aut_it++){
 				if (line.find(aut_it->first) != std::string::npos){
 					if (aut_it != _automata_loc.end()) {
@@ -102,15 +98,8 @@ Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std:
 	}
 	if (loc.get_path().empty())
 		throw std::runtime_error("Error en la configuracion de Location");
-	/* TODO:
-	Errores comunes:
-	 Falta de un -> ;
-	 Si Location {} no contiene directivas dentro
-	*/
-	//TODO: SI no hay ciertos datos para Location que lance un error
 	return loc;
 }
-
 
 Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	Server srv;
@@ -147,7 +136,6 @@ Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deq
 	return srv;
 
 }
-
 
 int ParserServer::dumpRawData(const char *file_name)
 {

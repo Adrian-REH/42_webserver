@@ -23,8 +23,8 @@ Location &Location::set_path(const std::string &path) {
 	return *this;
 }
 
-Location &Location::set_auto_index(const bool &auto_index) {
-	_auto_index = auto_index;
+Location &Location::set_auto_index(const std::string &rule) {
+	_auto_index = (rule.find("on") != std::string::npos);
 	return *this;
 }
 

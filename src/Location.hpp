@@ -64,7 +64,7 @@ class Location {
 		 * @param path The path associated with this location (e.g., "/images").
 		 * @return A reference to the current Location object for method chaining.
 		 */
-		Location &set_auto_index(const bool &auto_index);
+		Location &set_auto_index(const std::string &auto_index);
 
 		/**
 		 * @brief Set the upload directory for this location.
