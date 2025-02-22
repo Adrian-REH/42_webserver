@@ -81,8 +81,24 @@ std::string Server::get_error_page_by_key(const int key) {
 
 void Server::deleteClient(const int client_fd) {
 	Logger::log(Logger::DEBUG, "Server.cpp", "Deleting client_fd: "+ to_string(client_fd));
-	_clients.erase(client_fd);
+
+	std::map<int, Client *>::iterator it=  _clients.find(client_fd);
+	if (it != _clients.end()) {
+		delete it->second;
+		_clients.erase(it);
+	}
 }
+
+void Server::deleteClients() {
+	Logger::log(Logger::DEBUG, "Server.cpp", "Deleting all clients: ");
+
+	std::map<int, Client *>::iterator it;
+	for (it = _clients.begin(); it != _clients.end() ; it++) {
+		delete it->second;
+	}
+	_clients.clear();
+}
+
 
 std::string client_info(struct sockaddr_in client_address) {
     char client_ip[INET_ADDRSTRLEN];  // Buffer para la IP

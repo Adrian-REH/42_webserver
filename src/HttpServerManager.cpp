@@ -56,11 +56,10 @@ void HttpServerManager::stop() {
 		_srv_sockets.erase(it);
 		it = _srv_sockets.begin();
 	}
-	for (it_clifd_srv = _cli_srvs.begin(); it_clifd_srv != _cli_srvs.end(); it_clifd_srv++){
-		deleteClient(it_clifd_srv->first);
-		it_clifd_srv = _cli_srvs.begin();
+	for (it_clifd_srv = _cli_srvs.begin(); it_clifd_srv != _cli_srvs.end(); it_clifd_srv++) {
+		it_clifd_srv->second->deleteClients();
 	}
-
+	_cli_srvs.clear();
 	close(_epoll_fd);
 }
 
@@ -70,7 +69,6 @@ std::map<int, Server *>::iterator HttpServerManager::deleteClient(int client_fd)
 		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
 		close(client_fd);
 		_cli_srvs[client_fd]->deleteClient(client_fd);
-		_cli_srvs.erase(client_fd);
 	}
 	return it;
 }

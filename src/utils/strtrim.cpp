@@ -3,7 +3,7 @@
 std::string strtrim(const std::string& str) {
 	size_t start;
 	size_t end;
-
+	if (str.empty()) return "";
 	start = str.find_first_not_of(" \t\n\r\f\v");
 	if (start == std::string::npos)
 		return ("");

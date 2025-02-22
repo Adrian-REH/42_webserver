@@ -105,6 +105,7 @@ public:
 	Server &addClient(const Client &cli);
 	Server &set_timeout(const size_t timeout);
 	Server &set_max_req(const size_t max_req);
+	void deleteClients();
 	std::string get_error_page_by_key(const int key);
 	std::vector<Location> get_locations();
 	int getSocketFd() const;

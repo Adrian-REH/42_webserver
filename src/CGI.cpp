@@ -25,7 +25,8 @@ std::string CGI::determine_interpreter() const {
 
 int CGI::parse_request_details(std::map<std::string, std::string> headers) {
 	//Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryExBsdaWEWoLMf00z
-	std::deque<std::string>	content_type =  split(headers["Content-Type"], ';');
+	if (headers["Content-Type"].empty()) return 0;
+	std::deque<std::string>	content_type = split(headers["Content-Type"], ';');
 	std::string boundary;
 	std::cout <<  "'" << strtrim(content_type[0]) <<  "'"<< std::endl;
 	if (_method == "POST" && strtrim(content_type[0]) == "multipart/form-data")
@@ -33,7 +34,6 @@ int CGI::parse_request_details(std::map<std::string, std::string> headers) {
 		boundary = split(content_type[1], '=')[1];
 		_body = extractStrBetween(_body, boundary + "\r\n", boundary + "--\r\n");
 	}
-	
 	return 0;
 }
 /**
