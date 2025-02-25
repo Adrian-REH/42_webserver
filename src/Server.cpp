@@ -296,6 +296,8 @@ void Server::execute(Client &client) {
 		{
 			Logger::log(Logger::INFO,"Server.cpp", "Method not allowed: " + method);
 			rs = "HTTP/1.1 405 Method Not Allowed";
+			Logger::log(Logger::INFO,"Server.cpp", "Method not allowed: " + method);
+			rs = "HTTP/1.1 405 Method Not Allowed";
 			//Llamar a una clase que aloje todos los errores: HttpStatusStore
 			if (method != "HEAD")
 			{
@@ -308,7 +310,8 @@ void Server::execute(Client &client) {
 					rs += line + "\n";
 				inFile.close();
 			} else 
-				rs = "\r\n\r\n";
+				rs += "\r\n\r\n";
+			//std::cout << "[rs]: " << rs << std::endl;
 			client.send_response(rs);
 			return ;
 		}
@@ -367,13 +370,18 @@ void Server::execute(Client &client) {
 		Cookie cookie = handle_cookie_session(cookie_val);
 		//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
 
-		std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
-		char* env[] = {
-			(char*)http_cookie.c_str(),
-			NULL
-		};
+		
 		if (is_cgi)
 		{
+			std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
+			std::string type = "CONTENT_TYPE=" + req.get_header_by_key("Content-Type");
+			std::string req_m = "REQUEST_METHOD=POST";
+			char* env[] = {
+				(char*)http_cookie.c_str(),
+				(char*)type.c_str(),
+				(char*)req_m.c_str(),
+				NULL
+			};
 			Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
 			//Gestiono la respuesta de la ejecucion del CGI
 			CGI cgi(path, method, body, env);

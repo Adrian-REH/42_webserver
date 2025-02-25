@@ -86,7 +86,8 @@
 <body>
 	<div class="container">
 		<h1>Formulario </h1>
-		<form method="post" action=" ">
+		<form method="post" action="/cgi-bin/upload_file.py">
+		<form method="post" action="/cgi-bin/upload_file.py">
 			<label for="username">User:</label>
 			<input type="text" id="username" name="username" value="">
 			
@@ -96,8 +97,8 @@
 	</div>
 	<div class="container">
 		<h1>Upload a file </h1>
-		<form action="/cgi-bin/upload_file.py" method = "post">
-			<input type="file" id="myFile" name="filename">
+		<form enctype="multipart/form-data" action="/cgi-bin/upload_file.py" method = "post" >
+			<input type="file" id="myFile" name="file">
 			<input type="submit" value="Upload">
 		  </form>
 		<hr>
