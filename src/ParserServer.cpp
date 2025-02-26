@@ -43,7 +43,6 @@ LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it
 	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
 		if (line.find("}") != std::string::npos) { // Fin de limit_except
-			std::cout << line << std::endl;
 			break;
 		}
 		else {
@@ -73,14 +72,11 @@ Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std:
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
 		if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
-			std::cout << line << std::endl;
 			LimitExcept limExp = parseLimitExcept(it, end);
 			loc.set_limit_except(limExp);
 		} else if (line.find("}") != std::string::npos) { // Fin de location
-			std::cout << line << std::endl;
 			return loc;
 		} else {
-			std::cout << line << std::endl;
 
 			for (aut_it = _automata_loc.begin(); aut_it != _automata_loc.end(); aut_it++){
 				if (line.find(aut_it->first) != std::string::npos){
@@ -107,11 +103,9 @@ Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deq
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
 		if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
-			std::cout << line << std::endl;
 			Location loc = parseLocation(it, end);
 			srv.addLocation(loc);
 		} else if (line.find("}") != std::string::npos) { // Fin de server
-			std::cout << line << std::endl;
 			return srv;
 		} else {
 			for (aut_it = _automata_srv.begin(); aut_it!= _automata_srv.end(); aut_it++) {
@@ -162,7 +156,6 @@ std::vector<Server> ParserServer::execute(char **env) {
 	for (it = _content_file.begin(); it != _content_file.end(); ++it) {
 		std::string line = (*it);
 		if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
-			std::cout << line << std::endl;
 			srvs.push_back(parseServer(it, _content_file.end()));
 		}
 	}
