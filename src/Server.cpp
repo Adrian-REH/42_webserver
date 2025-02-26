@@ -368,7 +368,6 @@ void Server::execute(Client &client) {
 				return ;
 			}
 			else {
-
 				Logger::log(Logger::ERROR,"Server.cpp", "Throwing exception " + path_tmp);
 				throw std::runtime_error("No script found for the given path");
 			}
@@ -430,5 +429,6 @@ void Server::execute(Client &client) {
 		client.send_response(rs_start_line);
 	} catch(std::exception &e) {
 		Logger::log(Logger::ERROR,"Server.cpp", e.what());
+		client.send_error(404, "Not Found");
 	}
 }
