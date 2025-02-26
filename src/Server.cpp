@@ -307,8 +307,6 @@ void Server::execute(Client &client) {
 		{
 			Logger::log(Logger::INFO,"Server.cpp", "Method not allowed: " + method);
 			rs = "HTTP/1.1 405 Method Not Allowed";
-			Logger::log(Logger::INFO,"Server.cpp", "Method not allowed: " + method);
-			rs = "HTTP/1.1 405 Method Not Allowed";
 			//Llamar a una clase que aloje todos los errores: HttpStatusStore
 			if (method != "HEAD")
 			{
