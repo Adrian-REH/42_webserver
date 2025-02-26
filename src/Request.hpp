@@ -74,5 +74,6 @@ class Request {
 		std::string get_header_by_key(const std::string &key);
 		std::map<std::string, std::string> get_headers() const;
 		void display_header();
+		void display();
 };
 #endif

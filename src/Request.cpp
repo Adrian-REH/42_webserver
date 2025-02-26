@@ -64,32 +64,32 @@ void Request::receiving_headers()
 {
 	
 	size_t header_end = _raw_req.find("\r\n\r\n");
-	std::cout << "header_end : '" << header_end << "' size: " << _raw_req.size() << std::endl;
 	if (header_end == std::string::npos) {
-		_state = RECEIVING_HEADERS;
-		std::cout << "RECEIVING_HEADERS '" << std::endl;
+		if (_state != RECEIVING_HEADERS) {
+			_state = RECEIVING_HEADERS;
+			Logger::log(Logger::INFO, "Request.cpp", "Change State to: RECEIVING_HEADERS");
+		}
 		return ;//throw std::runtime_error("Malformed request: missing header-body separator.");
 	}
+	_state = RECEIVING_BODY;
+	std::cout << "header_end : '" << header_end << "' size: " << _raw_req.size() << std::endl;
 	std::string start_line = _raw_req.substr(0, _raw_req.find("\r\n"));
 	std::string headers_section = _raw_req.substr(_raw_req.find("\r\n") + 2, header_end - _raw_req.find("\r\n") - 2);
 	parse_start_line(start_line);
 	parse_headers(headers_section);
 
-	_state = RECEIVING_BODY;
-	std::cout << "RECEIVING_BODY '" << std::endl;
+	Logger::log(Logger::INFO, "Request.cpp", "Change State to: RECEIVING_BODY");
 	receiving_body(_raw_req.substr(header_end + 4));
 }
 
 void Request::receiving_body(std::string body_section) {
-	
 	_body += body_section;
 	if (_method == "GET" || _method == "HEAD" )
 	{
 		_state = DONE;
 		return ;
 	}
-
-	std::cout << "_body '" <<  _body<< "'" << std::endl;
+	std::cout << "_body '" << _body << "'" << std::endl;
 	if (_body.empty())
 		return ;
 	
@@ -100,7 +100,7 @@ void Request::receiving_body(std::string body_section) {
 		std::cout << "holaaa" << std::endl;
 		unsigned long content_length = to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
-		std::cout << "DONE REQ '" << std::endl;
+		Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE REQ");
 		_state = DONE;
 	} else if (_headers.find("Transfer-Encoding") != _headers.end() && _state < DONE && strtrim(_headers["Transfer-Encoding"]) == "chunked") {	
 		read_chunked_body();
@@ -154,7 +154,7 @@ void Request::read_chunked_body() {
 		{
 			//ENDING OF BODY
 			_state = DONE;
-			std::cout << "DONE CHUNKED BODY " << size << std::endl;
+			Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE CHUNKED BODY");
 			return ;
 		} else if (line.substr(0, line.find("\r")).size() < chunk_size)
 		{
@@ -179,9 +179,7 @@ Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body("
  */
 void Request::handle_request(std::string req) {
 	//size_t content_length = 0; TODO: usar
-	std::cout << "FULL REQUEST" << std::endl;
-	std::cout << req << "||" << std::endl;
-	
+	Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
 
 	if (_state == INIT || _state == RECEIVING_HEADERS) {
 		_raw_req += req;
@@ -230,4 +228,9 @@ void Request::display_header() {
 	for (it = _headers.begin(); it != _headers.end(); it ++){
 		Logger::log(Logger::DEBUG, "Request.cpp", it->first + " : " + it->second);
 	}
+}
+void Request::display() {
+	std::map<std::string, std::string>::iterator it;
+	display_header();
+	Logger::log(Logger::DEBUG, "Request.cpp", _body);
 }
