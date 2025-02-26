@@ -97,14 +97,14 @@ void Server::deleteClients() {
 }
 
 
-std::string client_info(struct sockaddr_in client_address) {
+std::pair<std::string, std::string> client_info(struct sockaddr_in client_address) {
     char client_ip[INET_ADDRSTRLEN];  // Buffer para la IP
     inet_ntop(AF_INET, &client_address.sin_addr, client_ip, INET_ADDRSTRLEN);
 
     int client_port = ntohs(client_address.sin_port); // Convertir a formato legible
 
 	std::string ip(client_ip);
-    return  " IP: " + ip + ", Port: " + to_string(client_port);
+	return std::make_pair(ip, to_string(client_port));
 }
 
 std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
@@ -116,10 +116,11 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 		Logger::log(Logger::WARN, "Server.cpp", "Error al aceptar la conexion");
 		return std::make_pair(this, -1);
 	}
+	std::pair<std::string, std::string> data_cli = client_info(client_address);
 	size_t n_clients = _clients.size();
 	if (n_clients >= _max_clients) {
 		Logger::log(Logger::ERROR, "Server.cpp", "¡Servidor Lleno!, n_clients: " + to_string(n_clients) + ", max_clients: " + to_string(_max_clients));
-		Logger::log(Logger::DEBUG, "Server.cpp", "The client was rejected: " + client_info(client_address));
+		Logger::log(Logger::DEBUG, "Server.cpp", "The client was rejected: IP: " + data_cli.first + "Port + " + data_cli.second );
 		if (client_fd != -1) {
 			// Enviar la respuesta nRetry-After 5 seg
 			send(client_fd, "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 5\r\n\r\n", 56, 0);
@@ -132,7 +133,10 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	ev.data.fd = client_fd;
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
 	_clients[client_fd] = new Client(client_fd);
-	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: " + client_info(client_address));
+	_clients[client_fd]->set_ip(data_cli.first);
+	_clients[client_fd]->set_port(data_cli.second);
+
+	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: IP: " + data_cli.first + " PORT: " + data_cli.second);
 	return std::make_pair(this, client_fd);
 }
 
@@ -376,17 +380,36 @@ void Server::execute(Client &client) {
 		Logger::log(Logger::INFO,"Server.cpp", "Verifing Cookie: " + cookie_val);
 		Cookie cookie = handle_cookie_session(cookie_val);
 		//Verifico si la Cookie es valida y lo dejo en env como HTTP_COOKIE="session=invalid/valid"
-
 		
 		if (is_cgi)
 		{
 			std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
-			std::string type = "CONTENT_TYPE=" + req.get_header_by_key("Content-Type");
-			std::string req_m = "REQUEST_METHOD=POST";
+			std::string req_m = "REQUEST_METHOD=" + method;
+			std::string content_length  = "CONTENT_LENGTH=" + req.get_header_by_key("Content-Length"); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
+			std::cout << "content_length; " << content_length << std::endl;
+			std::string query_string = "QUERY_STRING=" + req.get_query_string();
+			std::string script_name = "SCRIPT_NAME=" + path;
+			std::string content_type = "CONTENT_TYPE=" + req.get_header_by_key("Content-Type");
+			std::string server_name = "SERVER_NAME=" + req.get_header_by_key("Host");
+			std::string remote_addr = "REMOTE_ADDR=" + client.get_ip();
+			std::string server_port = "SERVER_PORT=" + to_string(_port);
+			std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
+			std::string http_user_agent = "HTTP_USER_AGENT=" + req.get_header_by_key("User-Agent");
+			std::string http_referer = "HTTP_REFERER=" + req.get_header_by_key("Referer");
+
 			char* env[] = {
 				(char*)http_cookie.c_str(),
-				(char*)type.c_str(),
 				(char*)req_m.c_str(),
+				(char*)content_length .c_str(),
+				(char*)query_string .c_str(),
+				(char*)script_name .c_str(),
+				(char*)content_type .c_str(),
+				(char*)server_name .c_str(),
+				(char*)remote_addr .c_str(),
+				(char*)server_port .c_str(),
+				(char*)server_protocol .c_str(),
+				(char*)http_user_agent .c_str(),
+				(char*)http_referer .c_str(),
 				NULL
 			};
 			Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
@@ -394,6 +417,7 @@ void Server::execute(Client &client) {
 			CGI cgi(path, method, body, env);
 			cgi.parse_request_details(req.get_headers());
 			rs = cgi.execute();
+			Logger::log(Logger::INFO,"Server.cpp", "Finished execut script: ");
 		}
 		
 		// Agrego Set-cookie en caso de que lo requiera
