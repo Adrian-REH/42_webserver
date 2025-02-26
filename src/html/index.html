@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Página de Inicio</title>
+	<style>
+		body {{
+			font-family: 'Arial', sans-serif;
+			background-color: #f4f4f9;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+		}}
+
+		.container {{
+			background-color: #ffffff;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+			padding: 30px;
+			width: 100%;
+			max-width: 400px;
+		}}
+
+		h1 {{
+			text-align: center;
+			color: #333333;
+		}}
+
+		label {{
+			font-size: 1rem;
+			margin-bottom: 10px;
+			display: inline-block;
+			color: #555555;
+		}}
+
+		input[type="text"], input[type="password"] {{
+			width: 100%;
+			padding: 10px;
+			margin-bottom: 20px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 1rem;
+			box-sizing: border-box;
+		}}
+
+		input[type="text"]:focus, input[type="password"]:focus {{
+			border-color: #007BFF;
+			outline: none;
+		}}
+
+		input[type="submit"] {{
+			background-color: #007BFF;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 4px;
+			font-size: 1rem;
+			cursor: pointer;
+			width: 100%;
+		}}
+
+		input[type="submit"]:hover {{
+			background-color: #0056b3;
+		}}
+
+		.message {{
+			text-align: center;
+			font-size: 1.2rem;
+			color: #333333;
+			margin-top: 20px;
+		}}
+
+		.message.error {{
+			color: #dc3545;
+		}}
+
+		.message.success {{
+			color: #28a745;
+		}}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>Formulario </h1>
+		<form method="post" action="/cgi-bin/upload_file.py">
+		<form method="post" action="/cgi-bin/upload_file.py">
+			<label for="username">User:</label>
+			<input type="text" id="username" name="username" value="">
+			
+			<input type="submit" value="Submit">
+		</form>
+		<hr>
+	</div>
+	<div class="container">
+		<h1>Upload a file </h1>
+		<form enctype="multipart/form-data" action="/cgi-bin/upload_file.py" method = "post" >
+			<input type="file" id="myFile" name="file">
+			<input type="submit" value="Upload">
+		  </form>
+		<hr>
+	</div>
+	
+</body>
+</html>
