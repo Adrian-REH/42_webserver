@@ -136,7 +136,7 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	_clients[client_fd]->set_ip(data_cli.first);
 	_clients[client_fd]->set_port(data_cli.second);
 
-	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: IP: " + data_cli.first + " PORT: " + data_cli.second);
+	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: IP:PORT " + data_cli.first + ":" + data_cli.second + " fd: " + to_string(client_fd));
 	return std::make_pair(this, client_fd);
 }
 
@@ -386,7 +386,6 @@ void Server::execute(Client &client) {
 			std::string http_cookie = "HTTP_COOKIE=" + ("session=" + cookie.get_session() + "; session_id=" + cookie.get_session_id());
 			std::string req_m = "REQUEST_METHOD=" + method;
 			std::string content_length  = "CONTENT_LENGTH=" + req.get_header_by_key("Content-Length"); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
-			std::cout << "content_length; " << content_length << std::endl;
 			std::string query_string = "QUERY_STRING=" + req.get_query_string();
 			std::string script_name = "SCRIPT_NAME=" + path;
 			std::string content_type = "CONTENT_TYPE=" + req.get_header_by_key("Content-Type");
