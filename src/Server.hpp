@@ -95,7 +95,7 @@ private:
 public:
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
-	Server(int port = 8080, size_t max_clients = 10, size_t timeout = 1, size_t max_req = 100);
+	Server(int port = 8080, size_t max_clients = 1024, size_t timeout = 1, size_t max_req = 100);
 	Server &set_port(const size_t port);
 	Server &setSocketFd(const int sock_fd);
 	Server &set_server_name(const std::string &server_name);

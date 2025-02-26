@@ -29,11 +29,12 @@ int CGI::parse_request_details(std::map<std::string, std::string> headers) {
 	std::deque<std::string>	content_type = split(headers["Content-Type"], ';');
 	std::string boundary;
 	std::cout <<  "'" << strtrim(content_type[0]) <<  "'"<< std::endl;
-	if (_method == "POST" && strtrim(content_type[0]) == "multipart/form-data")
+	/* if (_method == "POST" && strtrim(content_type[0]) == "multipart/form-data")
 	{
 		boundary = split(content_type[1], '=')[1];
 		_body = extractStrBetween(_body, boundary + "\r\n", boundary + "--\r\n");
-	}
+	} */
+	
 	return 0;
 }
 /**
