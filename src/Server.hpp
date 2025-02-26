@@ -110,6 +110,7 @@ public:
 	std::vector<Location> get_locations();
 	int getSocketFd() const;
 	int getPort() const;
+	Client* get_client(int client_fd);
 	bool location_empty();
 	void deleteClient(const int client_fd);
 	int getMaxClients() const;

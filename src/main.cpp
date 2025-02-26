@@ -29,9 +29,9 @@ int main(int argc, char **argv, char **env) {
 	else if (argc == 2 && !parserSrv.dumpRawData(argv[1]))
 		return 1;
 	
+
 	std::vector<Server> srvs =  parserSrv.execute(env);
 
 	HttpServerManager httpManager;
 	httpManager.start(srvs);
-	//httpManager.stop();
 }

@@ -5,7 +5,6 @@ Server::Server(int port, size_t max_clients, size_t timeout, size_t max_req) : _
 }
 
 Server &Server::set_max_req(const size_t max_req) {
-	std::cout << "dir: " << this << std::endl;
 
 	if (this->_max_req && max_req)
 		this->_max_req = (max_req > 100) ? 100: max_req;
@@ -13,14 +12,12 @@ Server &Server::set_max_req(const size_t max_req) {
 }
 
 Server &Server::set_timeout(const size_t timeout) {
-	std::cout << "dir: " << this << std::endl;
 	if (this->_timeout && timeout)
 	this->_timeout = (timeout > 5) ? 5: timeout;
 	return *this;
 }
 
 Server &Server::set_port(const size_t port) {
-	std::cout << "dir: " << this << std::endl;
 
 	_port=port;
 	return *this;
@@ -151,6 +148,13 @@ Cookie Server::validate_session_id(std::string &session_id) {
 	}
 	return Cookie();
 }
+Client* Server::get_client(int client_fd) {
+	std::map<int, Client *>::iterator it = _clients.find(client_fd);
+	Client* client = NULL;
+	if (it != _clients.end())
+		client = it->second;
+	return client;
+}
 
 int Server::handle_input_client(int client_fd) {
 	std::map<int, Client *>::iterator it = _clients.find(client_fd);
@@ -170,7 +174,6 @@ int Server::handle_input_client(int client_fd) {
 		std::cerr <<"Exception: " << e.what() << std::endl;
 		//return -1;
 	}
-	
 	return 0;
 }
 
@@ -253,9 +256,10 @@ void Server::execute(Client &client) {
 
 	if (req.get_state() <  3) // Server needs to wait to receive the full request since is nonblocking
 	{
-		std::cout << "PENDING TO FINISH THE REQUEST "  << std::endl;
+		Logger::log(Logger::INFO, "Server.cpp", "PENDING TO FINISH THE REQUEST");
 		return ;
 	}
+
 	try {
 		Logger::log(Logger::INFO,"Server.cpp", "Starting CGI execution.");
 		std::string rs;
@@ -267,7 +271,11 @@ void Server::execute(Client &client) {
 		std::string path_tmp;
 		
 		//Rechazar u Aceptar Keep-Alive:
-		if (_timeout > 0 && req.get_header_by_key("Connection").compare("keep-alive") && !client.has_max_req(_max_req) ) {
+		std::string connection = req.get_header_by_key("Connection");
+		if (connection.empty()){
+			rs_start_line.append("Connection: close\r\n");
+		}
+		else if (_timeout > 0 && !connection.empty() && connection.compare("keep-alive") && !client.has_max_req(_max_req) ) {
 			rs_start_line.append("Connection: Keep-Alive\r\n");
 			rs_start_line.append("Keep-Alive: timeout=" + to_string(_timeout) + ", " + "max= " + to_string(_max_req) + "\r\n");
 		}
@@ -277,7 +285,6 @@ void Server::execute(Client &client) {
 			{
 				Logger::log(Logger::INFO,"Server.cpp", "Checking location: " + it->get_path());
 				try {
-
 					if (it->findScriptPath(path, path_tmp) == 0)
 						break;
 					else //if (it->findScriptPath(path, path_tmp) == 1)
@@ -392,7 +399,5 @@ void Server::execute(Client &client) {
 		client.send_response(rs_start_line);
 	} catch(std::exception &e) {
 		Logger::log(Logger::ERROR,"Server.cpp", e.what());
-
 	}
-
 }

@@ -100,6 +100,10 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		std::string path_tmp  = extractStrStart(path, "/");
 		file = extractStrEnd(path, path_tmp); //extractStrEnd
 		path = path_tmp;
+		if (!_index.empty() && ends_with(path, _index))
+			return final_path = buildFullPath(_root_directory, "", path), 0;
+
+		//return buildFullPath(_root_directory, path, ""), 0;
 	}
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
@@ -120,7 +124,6 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		/*else if (*it == _index){
 			return final_path = buildFullPath(dir, "", _index), 0;
 		}*/
-			
 	}
 	//No existe o autoindex
 	return (final_path = dir,1);

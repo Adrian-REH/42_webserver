@@ -150,6 +150,7 @@ void HttpServerManager::handle_epoll()
 			{
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client_fd: " + to_string(events[i].data.fd));
 				int result = it_cli->second->handle_input_client(it_cli->first);
+				Client* client = it_cli->second->get_client(it_cli->first);
 				if (result < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);
@@ -159,10 +160,11 @@ void HttpServerManager::handle_epoll()
 					deleteClient(it_cli->first);
 					continue ;
 				}
-				if (set_event_action(it_cli->first, EPOLLOUT) < 0) {
-						Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(it_cli->first));
-						deleteClient(it_cli->first);
-					}
+
+				if (client && client->get_request().get_state() == 3 && set_event_action(it_cli->first, EPOLLOUT) < 0) {
+					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(it_cli->first));
+					deleteClient(it_cli->first);
+				}
 			}
 			else {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll error.");

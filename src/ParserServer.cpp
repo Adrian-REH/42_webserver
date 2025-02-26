@@ -26,7 +26,6 @@ void ParserServer::init_automata() {
 	_automata_loc["upload_store "].setSetter(&Location::set_path_upload_directory, Setter<Location>::STRING);
 	_automata_limexc["deny"].setSetter(&LimitExcept::setDenyAction, Setter<LimitExcept>::STRING);
 
-
 }
 
 LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
