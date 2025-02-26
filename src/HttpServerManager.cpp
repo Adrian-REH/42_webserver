@@ -34,8 +34,8 @@ int HttpServerManager::start(std::vector<Server> srvs) {
 			close(socket_fd);
 			continue ;
 		}
-		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Server socket registered with epoll");
-
+		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Server socket registered: host:port http://localhost:"+ to_string(it->getPort()) +" socket_fd: " + to_string(socket_fd));
+		
 		_sock_srvs[socket_fd] = &(*it);
 		_max_events += it->getMaxClients();
 	}
@@ -69,6 +69,7 @@ std::map<int, Server *>::iterator HttpServerManager::deleteClient(int client_fd)
 		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
 		close(client_fd);
 		_cli_srvs[client_fd]->deleteClient(client_fd);
+		_cli_srvs.erase(it);
 	}
 	return it;
 }
@@ -118,7 +119,7 @@ void HttpServerManager::handle_epoll()
 			std::map<int, Server *>::iterator it_cli = _cli_srvs.find(events[i].data.fd);
 
 			if (it_srv != _sock_srvs.end()) {
-				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server name: " + it_srv->second->get_server_name());
+				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server host:port " + it_srv->second->get_server_name() + ":"+ to_string(it_srv->second->getPort()));
 				try {
 					std::pair<Server*, int > srv_clifd = it_srv->second->accept_connections(_epoll_fd);
 					if (srv_clifd.second < 0) // No pudo aceptar la conexion
