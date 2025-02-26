@@ -1,7 +1,7 @@
 
 #include "Location.hpp"
 
-Location::Location() {}
+Location::Location(): _auto_index(false), _client_max_body_size(0) {}
 
 Location &Location::set_root_directory(const std::string &root) {
 	_root_directory = root;
