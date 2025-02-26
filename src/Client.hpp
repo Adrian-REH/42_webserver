@@ -18,6 +18,8 @@
 class Client {
 private:
 	int _socket_fd;
+	std::string _ip;
+	std::string _port;
 	size_t _last_request;
 	size_t _n_request;
 	Request _request;
@@ -93,6 +95,10 @@ public:
 	void send_error(int code, const std::string& message);
 	size_t  has_client_timed_out();
 	bool  has_max_req(size_t n_req);
+	std::string get_port() const;
+	std::string get_ip() const;
+	void set_ip(std::string);
+	void set_port(std::string);
 };
 
 #endif

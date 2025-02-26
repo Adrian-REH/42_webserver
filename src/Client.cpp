@@ -138,3 +138,16 @@ size_t  Client::has_client_timed_out() {
 bool  Client::has_max_req(size_t n_req) {
 	return  _n_request > n_req;
 }
+
+std::string Client::get_port() const {
+	return _port;
+}
+std::string Client::get_ip() const{
+	return _ip;
+}
+void Client::set_ip(std::string ip) {
+	_ip = ip;
+}
+void Client::set_port(std::string port) {
+	_ip = port;
+}
