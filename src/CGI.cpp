@@ -61,37 +61,43 @@ std::string CGI::execute() {
 	}
 
 	if (pid == 0) {
-		// Hijo: Configurar el entorno para la ejecución del CGI
-		close(io[0]);
-		dup2(io[1], STDOUT_FILENO);
-		dup2(io[1], STDERR_FILENO);
-		close(io[1]);
 		try {
-			// Determinar el intérprete según el tipo de script
 			std::string interpreter = determine_interpreter();
-
 			char* argv[] = {
 				(char*)interpreter.c_str(),
-				(char*)_script_path.c_str() + 1, // Quito le primer caracter '/'
-				(char*)_body.c_str(),
+				(char*)_script_path.c_str() + 1, // Quito el primer caracter '/'
 				NULL
 			};
+			dup2(io[1], STDOUT_FILENO);
+			dup2(io[1], STDERR_FILENO);
+			close(io[1]);
+			dup2(io[0], STDIN_FILENO);
+			close(io[0]);
+
 			execve(interpreter.c_str(), argv, _env);
 			exit(4);
 		} catch (const std::exception&  ) {
 			exit(2);
 		}
 	} else {
-		// Padre: Leer la salida del hijo
+		size_t bytes_written = 0;
+		while (bytes_written < _body.size()) {
+			ssize_t ret = write(io[1], _body.c_str() + bytes_written, _body.size() - bytes_written);
+			if (ret == -1) {
+				std::cout << "ERROR "<< std::endl;
+				break;
+			}
+			bytes_written ++;
+		}
 		close(io[1]);
-		waitpid(pid, &status, WUNTRACED);
+		// Padre: Leer la salida del hijo
+		waitpid(pid, &status, 0);
 		//status = WEXITSTATUS(status);
 		int ret;
 		if (WIFEXITED(status)){
 			ret = WEXITSTATUS(status);
 			//Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
 		}
-			
 		if (WIFSIGNALED(status)){
 			ret = WTERMSIG(status);
 			//Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
