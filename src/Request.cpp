@@ -16,6 +16,11 @@ void Request::parse_start_line(const std::string& start_line) {
 	}
 	_method = parts[0];
 	_path = parts[1];
+	if (parts.size() > 1) {
+		size_t pos = parts[1].find('?');
+		if (pos != std::string::npos)
+			_query_string = parts[1].substr(pos+1);
+	}
 	_protocol = parts[2];
 }
 /**
@@ -52,7 +57,7 @@ void Request::parse_headers(const std::string& headers_section) {
  * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
  */
 void Request::parse_body(const std::string& body_section, unsigned long content_length) {
-	std::cout << "body_section size: " <<body_section.size() << std::endl;
+	std::cout << "body_section size: " << body_section.size() << std::endl;
 	std::cout << "content_length : "<< content_length << std::endl;
 	if (body_section.size() != (size_t)content_length) {
 		throw std::runtime_error("Body size mismatch with Content-Length.");
@@ -166,7 +171,7 @@ void Request::read_chunked_body() {
 	}
 }
 
-Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""), _state(INIT) {}
+Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""),_query_string(""), _state(INIT) {}
 
 /**
  * @brief Analiza una solicitud HTTP a partir de un buffer.
@@ -209,6 +214,10 @@ std::string Request::get_protocol() const {
 
 std::string Request::get_body() const {
 	return _body;
+}
+
+std::string Request::get_query_string()const {
+	return _query_string;
 }
 
 int Request::get_state() const {

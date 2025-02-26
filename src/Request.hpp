@@ -20,7 +20,9 @@ class Request {
 		std::string _method;
 		std::string _path;
 		std::string _protocol;
+		std::string _client_ip;
 		std::string _body;
+		std::string _query_string;
 		std::map<std::string, std::string> _headers;
 		int _state;
 		enum { INIT, RECEIVING_HEADERS, RECEIVING_BODY, DONE };
@@ -67,6 +69,7 @@ class Request {
 		void handle_request(std::string req);
 		void set_state(int state);
 		std::string get_path() const;
+		std::string get_query_string()const;
 		std::string get_method() const;
 		std::string get_protocol() const;
 		std::string get_body() const;
