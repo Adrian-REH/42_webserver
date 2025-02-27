@@ -80,15 +80,9 @@ std::string CGI::execute() {
 			exit(2);
 		}
 	} else {
-		size_t bytes_written = 0;
-		while (bytes_written < _body.size()) {
-			ssize_t ret = write(io[1], _body.c_str() + bytes_written, _body.size() - bytes_written);
-			if (ret == -1) {
-				std::cout << "ERROR "<< std::endl;
-				break;
-			}
-			bytes_written ++;
-		}
+		//size_t bytes_written = 0;
+		std::cout<< "BOOOODYY: " << _body << std::endl;
+		write(io[1], _body.c_str(), _body.size() );
 		close(io[1]);
 		// Padre: Leer la salida del hijo
 		waitpid(pid, &status, 0);
@@ -104,13 +98,14 @@ std::string CGI::execute() {
 		}
 			
 		// TODO: Intentar devolver multiples codigos de error
+		std::string result = readFd(io[0]);
 		if (ret) {
 			close(io[0]);
 			std::string error(strerror(ret));
-			throw std::runtime_error("Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _body);
+			throw std::runtime_error("Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _body + ", result: " + result);
 		}
-		std::string result = readFd(io[0]);
 		close(io[0]);
+		std::cout << "RESULT: "<< result << std::endl;
 		return (result);
 	}
 }

@@ -392,6 +392,7 @@ void Server::execute(Client &client) {
 			std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
 			std::string http_user_agent = "HTTP_USER_AGENT=" + req.get_header_by_key("User-Agent");
 			std::string http_referer = "HTTP_REFERER=" + req.get_header_by_key("Referer");
+			std::string accept_encoding = "ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding");
 
 			char* env[] = {
 				(char*)http_cookie.c_str(),
@@ -406,6 +407,7 @@ void Server::execute(Client &client) {
 				(char*)server_protocol .c_str(),
 				(char*)http_user_agent .c_str(),
 				(char*)http_referer .c_str(),
+				(char*)accept_encoding .c_str(),
 				NULL
 			};
 			Logger::log(Logger::INFO,"Server.cpp", "Executing script: " + path);
