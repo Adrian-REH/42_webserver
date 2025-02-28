@@ -26,7 +26,7 @@ class HttpException  {
 	class BadRequestException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
-				return "404 Not Found";
+				return "400 Bad Request";
 			}
 	};
 	

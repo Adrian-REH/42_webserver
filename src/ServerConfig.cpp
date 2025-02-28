@@ -2,7 +2,13 @@
 #include "Logger.hpp"
 #include "Config.hpp"
 
-ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) { //,_max_clients(max_clients), _env_len(0){
+ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) {
+	_error_pages[400] = "/html/400.html";
+	_error_pages[404] = "/html/404.html";
+	_error_pages[405] = "/html/405.html";
+	_error_pages[204] = "/html/204.html";
+	_error_pages[301] = "/html/301.html";
+	_error_pages[500] = "/html/500.html";
 }
 
 ServerConfig &ServerConfig::set_max_req(const size_t max_req) {
