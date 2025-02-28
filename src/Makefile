@@ -14,12 +14,14 @@ NAME = WEBS
 CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -D LOG_LEVEL=3 -std=c++98 -g3 
 COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
-INCLUDE = -I. -Iutils
-SRCS = main.cpp Server.cpp HttpServerManager.cpp Location.cpp \
-	   ParserServer.cpp CGI.cpp Request.cpp Client.cpp Cookie.cpp\
-	   utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
-	   utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
-	   utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp
+INCLUDE = -I.  -Iutils
+SRCS = main.cpp Server.cpp ServerConfig.cpp HttpServerManager.cpp Location.cpp \
+		CGI.cpp Request.cpp Client.cpp\
+		utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
+		utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
+		utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp \
+		ParserConfig.cpp  Config.cpp  \
+		SessionCookieManager.cpp
 OBJS = ${SRCS:.cpp=.o}
 
 # Regla por defecto

@@ -9,7 +9,6 @@
 #include "Request.hpp"
 #include "Logger.hpp"
 #include <ctime>
-#include "Response.hpp"
 #include "SessionCookieManager.hpp"
 #include "Cookie.hpp"
 #include "ServerConfig.hpp"
@@ -27,7 +26,6 @@ class Client {
 		size_t _last_request;
 		size_t _n_request;
 		Request _request;
-		Response _response;
 		void handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line);
 		Cookie handle_cookie();
 		std::string prepare_cgi_data( const ServerConfig &srv_conf, Cookie cookie);
