@@ -32,7 +32,6 @@ void Request::parse_start_line(const std::string& start_line) {
 void Request::parse_headers(const std::string& headers_section) {
 	std::istringstream stream(headers_section);
 	std::string line;
-	//TODO: Error with parser header example: Cookie : session_id=14332Content-Type: text/html
 	//Itero linea a linea buscando : para parsear key value to map
 	Logger::log(Logger::DEBUG, "Request.cpp", "Request Header:");
 	while (std::getline(stream, line) && line != "\r") {
@@ -182,7 +181,7 @@ Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body("
  * @param req String que contiene la solicitud HTTP.
  * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
  */
-void Request::handle_request(std::string req) {
+void Request::parser(std::string req) {
 	//size_t content_length = 0; TODO: usar
 	Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
 
@@ -198,6 +197,14 @@ void Request::handle_request(std::string req) {
 
 void Request::set_state(int state) {
 	_state = state;
+}
+
+
+void Request::set_header(std::string key, std::string value) {
+	std::map<std::string, std::string> ::iterator it = _headers.find(key);
+	if (it != _headers.end())
+		return ;
+	_headers[key] = value;
 }
 
 std::string Request::get_path() const {
@@ -225,7 +232,12 @@ int Request::get_state() const {
 }
 
 std::string Request::get_header_by_key(const std::string &key) {
-	return _headers[key];
+	std::map<std::string, std::string>::iterator it = _headers.find(key);
+
+	if (it != _headers.end())
+		return it->second;
+	else
+		return "";
 }
 
 std::map<std::string, std::string> Request::get_headers() const {
