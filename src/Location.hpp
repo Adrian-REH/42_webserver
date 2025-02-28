@@ -134,6 +134,15 @@ class Location {
 		bool operator<(const Location & other) const {
 			return this->get_path() < other.get_path();
 		}
+	class LocationNotContainPathException: public std::exception {
+		public:
+			const char* what() const throw() {
+				return "Location not contain path";
+			}
+	};
+	bool empty() {
+		return _path.empty();
+	}
 };
 
 
