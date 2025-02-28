@@ -11,7 +11,7 @@ class  LimitExcept {
 		std::string _authMessage; // Mensaje de autenticación (opcional)
 
 	public:
-		LimitExcept() {}
+		LimitExcept() : _allowedMethods(), _denyAction(""), _logMessage(""), _authMessage("") {}
 		// Constructor
 		LimitExcept(const std::vector<std::string>& methods, const std::string& denyAction = "deny all")
 			: _allowedMethods(methods.begin(), methods.end()), _denyAction(denyAction) {}

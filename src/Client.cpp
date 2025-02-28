@@ -95,44 +95,6 @@ int Client::handle_request() {
 }
 
 
-//TODO: Esta es una funcion de utils
-std::string generate_index_html(std::vector<std::string> files, std::string dir_path) {
-	std::string index_file;
-    // Escribir el encabezado HTML
-	index_file = "Content-Type: text/html\r\n\r\n";
-    index_file.append("<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<title>Index of ");
-	index_file.append(dir_path);
-	index_file.append("</title>\n</head>\n<body>\n");
-    index_file.append( "<h1>Index of ");
-	index_file.append(dir_path);
-	index_file.append("</h1>\n<ul>\n");
-
-    // Leer los archivos y directorios
-	std::vector<std::string>::iterator it;
-    for (it = files.begin(); it != files.end(); it ++) {
-        std::string entry_path = *it;
-        // Ignorar los directorios "." y ".."
-        if (entry_path == "." || entry_path == "..") {
-            continue;
-        }
-        // Escribir cada archivo/directorio en la lista HTML
-        index_file.append( "<li><a href=\"");
-		index_file.append(entry_path);
-		index_file.append("\">");
-
-		std::string entry_name(entry_path);
-		entry_name = extractStrREnd(entry_name, "/");
-	
-		index_file.append(entry_name);
-		index_file.append("</a></li>\n");
-    }
-
-    // Escribir el pie de página HTML
-    index_file.append("</ul>\n</body>\n</html>\n");
-	return index_file;
-}
-
-//TODO: Esto es un Util
 std::string resolve_html_path(std::string path) {
 	std::string rs;
 	if (path[0] == '/')
@@ -216,10 +178,12 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	std::vector<std::string> files;
 	Location loc = srv_conf.findMatchingLocation(path);
 	std::string method = _request.get_method();
-
+	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
 	try {
 		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
 			throw HttpException::NotAllowedMethodException();
+		else if (!loc.get_redirect_url().empty())
+			throw HttpException::MovedPermanentlyRedirectionException();
 		if (loc.findScriptPath(path, path_tmp)) {
 			if (loc.get_auto_index()) {
 				files = loc.get_files();
@@ -255,26 +219,37 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		return 0;
 	}
 	catch(HttpException::NotAllowedMethodException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(405, "Not Allowed Method");
 		std::string path_error = srv_conf.get_error_page_by_code(405);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::BadRequestException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(400, "Bad Request");
 		std::string path_error = srv_conf.get_error_page_by_code(400);
 		rs = resolve_html_path(path_error);
 		
 	}
 	catch(HttpException::NoContentException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(204, "Not Content");
 		std::string path_error = srv_conf.get_error_page_by_code(204);
 		rs = resolve_html_path(path_error);
 		
 	}
 	catch(HttpException::NotFoundException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(404, "Not Found");
 		std::string path_error = srv_conf.get_error_page_by_code(404);
 		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::MovedPermanentlyRedirectionException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(301, "Moved Permanently Redirection");
+		rs = "Content-Type: text/html\r\n";
+		rs.append("Location: "+ loc.get_redirect_url() +"\r\n\r\n");
+		rs.append("<html><body>Redirigiendo...</body></html>");
 	}
 	rs_start_line.append(rs);
 	send_response(rs_start_line);

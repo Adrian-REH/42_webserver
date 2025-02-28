@@ -1,7 +1,7 @@
 
 #include "Location.hpp"
 
-Location::Location(): _auto_index(false), _client_max_body_size(0) {}
+Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false), _client_max_body_size(0),_path_upload_directory("") {}
 
 Location &Location::set_root_directory(const std::string &root) {
 	_root_directory = root;
@@ -39,8 +39,15 @@ Location &Location::set_client_max_body_size(const int cli_max_body_size) {
 }
 
 Location &Location::set_redirect_url(const std::string &str) {
-	_redirect_url = str;
+	std::deque<std::string> args = split(str, ' ');
+	if (args.size() != 2)
+		throw Location::LocationBadRedirectException();
+	_redirect_url = args[1];
 	return *this;
+}
+
+std::string Location::get_redirect_url() {
+	return _redirect_url;
 }
 
 Location &Location::set_limit_except(LimitExcept &l) {

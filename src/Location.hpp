@@ -96,6 +96,8 @@ class Location {
 		 */
 		Location &set_redirect_url(const std::string &str);
 
+		std::string get_redirect_url();
+
 		Location &set_limit_except(LimitExcept &l);
 
 		std::string get_path() const;
@@ -138,6 +140,12 @@ class Location {
 		public:
 			const char* what() const throw() {
 				return "Location not contain path";
+			}
+	};
+	class LocationBadRedirectException: public std::exception {
+		public:
+			const char* what() const throw() {
+				return "The redirect code and URL were not provided properly";
 			}
 	};
 	bool empty() {

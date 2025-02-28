@@ -32,5 +32,6 @@ std::string					to_string(int value);
 int							to_int(std::string value);
 unsigned long				to_hex_ulong(std::string value);
 unsigned long				to_dec_ulong(std::string value);
+std::string					generate_index_html(std::vector<std::string> files, std::string dir_path);
 
 #endif

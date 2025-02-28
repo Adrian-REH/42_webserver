@@ -36,6 +36,12 @@ class HttpException  {
 				return "500 Internal Server Error";
 			}
 	};
+	class MovedPermanentlyRedirectionException : public std::exception {
+		public:
+			virtual const char* what() const throw() {
+				return "301 Moved Permanently redirection";
+			}
+	};
 };
 
 
