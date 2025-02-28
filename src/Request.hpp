@@ -66,8 +66,9 @@ class Request {
 		 * @param req String que contiene la solicitud HTTP.
 		 * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
 		 */
-		void handle_request(std::string req);
+		void parser(std::string req);
 		void set_state(int state);
+		void set_header(std::string key, std::string value);
 		std::string get_path() const;
 		std::string get_query_string()const;
 		std::string get_method() const;

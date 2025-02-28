@@ -1,6 +1,6 @@
 #include "Server.hpp"
-#include "ParserServer.hpp"
 #include "HttpServerManager.hpp"
+#include "ParserConfig.hpp"
 
 void	sigint_handler(int signum)
 {
@@ -12,6 +12,7 @@ void	sigint_handler(int signum)
 		std::cout << "SIGKILL"<< std::endl;
 }
 
+
 int main(int argc, char **argv, char **env) {
 	struct sigaction	sa;
 	sa.sa_handler = sigint_handler;
@@ -19,7 +20,7 @@ int main(int argc, char **argv, char **env) {
 	(sigaction(SIGINT, &sa, NULL), sigaction(SIGQUIT, &sa, NULL));
 	sigaction(SIGKILL, &sa, NULL);
 
-	ParserServer parserSrv;
+	ParserConfig parserSrv;
 	
 	if (argc > 2)
 	{
@@ -30,8 +31,8 @@ int main(int argc, char **argv, char **env) {
 		return 1;
 	
 
-	std::vector<Server> srvs =  parserSrv.execute(env);
+	parserSrv.execute(env);
 
 	HttpServerManager httpManager;
-	httpManager.start(srvs);
+	httpManager.start();
 }

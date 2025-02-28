@@ -1,7 +1,13 @@
 
 
 #include "Client.hpp"
-
+#include "Location.hpp"
+#include "CGI.hpp"
+#include "Config.hpp"
+#include "HttpException.hpp"
+#include "SessionCookieManager.hpp"
+#include "Cookie.hpp"
+#include "ServerConfig.hpp"
 
 /**
  * @brief Constructor de la clase `Client`.
@@ -55,13 +61,12 @@ void Client::reset_last_request() {
  * @return true Si se reciben datos correctamente y se procesan.
  * @return false Si el cliente se desconecta o no se reciben datos.
  */
-int Client::receive_data() {
+int Client::handle_request() {
 	char buffer[1024];
 	std::string request_data;
 	int bytes_received;
 
 	_request.set_state(0);
-	// TODO: further look into the return values of recv
 	while (true) {
 		bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
 		std::cout << "bytes_received " << bytes_received << std::endl; 
@@ -84,48 +89,206 @@ int Client::receive_data() {
 			return -1;
 		}
 	}
-	_request.handle_request(request_data);
+	_request.parser(request_data);
+	std::string path_tmp;
 	return 0;
 }
-/*if (bytes_received > 0) {
-		Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
-		_request.parse_request(buffer, bytes_received);
-		if (_request.get_header_by_key("Connection") == "close") {
-			Logger::log(Logger::INFO, "Client.cpp", "El cliente pidio desconectarse, client_fd: " + to_string(_socket_fd));
-			return 1;
+
+
+//TODO: Esta es una funcion de utils
+std::string generate_index_html(std::vector<std::string> files, std::string dir_path) {
+	std::string index_file;
+    // Escribir el encabezado HTML
+	index_file = "Content-Type: text/html\r\n\r\n";
+    index_file.append("<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<title>Index of ");
+	index_file.append(dir_path);
+	index_file.append("</title>\n</head>\n<body>\n");
+    index_file.append( "<h1>Index of ");
+	index_file.append(dir_path);
+	index_file.append("</h1>\n<ul>\n");
+
+    // Leer los archivos y directorios
+	std::vector<std::string>::iterator it;
+    for (it = files.begin(); it != files.end(); it ++) {
+        std::string entry_path = *it;
+        // Ignorar los directorios "." y ".."
+        if (entry_path == "." || entry_path == "..") {
+            continue;
+        }
+        // Escribir cada archivo/directorio en la lista HTML
+        index_file.append( "<li><a href=\"");
+		index_file.append(entry_path);
+		index_file.append("\">");
+
+		std::string entry_name(entry_path);
+		entry_name = extractStrREnd(entry_name, "/");
+	
+		index_file.append(entry_name);
+		index_file.append("</a></li>\n");
+    }
+
+    // Escribir el pie de página HTML
+    index_file.append("</ul>\n</body>\n</html>\n");
+	return index_file;
+}
+
+//TODO: Esto es un Util
+std::string resolve_html_path(std::string path) {
+	std::string rs;
+	if (path[0] == '/')
+		path.erase(0,1);
+
+	Logger::log(Logger::INFO,"Client.cpp", "resolve_html_path: " + path);
+	rs = "Content-Type: text/html\r\n\r\n";
+	std::ifstream	inFile(path.c_str());
+	if (!inFile)
+		throw HttpException::InternalServerErrorException();
+	std::string line;
+	while (std::getline(inFile, line))
+		rs += line + "\n";
+	inFile.close();
+	return rs;
+}
+
+std::string create_start_line(int code, std::string message){
+	std::string start_line = "HTTP/1.1 " + to_string(code) +" "+ message +"\r\n";
+	return start_line;
+}
+
+void Client::handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line) {
+	std::string connection = _request.get_header_by_key("Connection");
+
+	if (connection.empty()) {
+		rs_start_line.append("Connection: close");
+	} else if (srv_conf.get_timeout() > 0 && connection.compare("keep-alive") == 0 && !has_max_req(srv_conf.get_max_req())) {
+		rs_start_line.append("Connection: Keep-Alive\r\n");
+		rs_start_line.append("Keep-Alive: timeout=" + to_string(srv_conf.get_timeout()) + ", max=" + to_string(srv_conf.get_max_req()) + "\r\n");
+	}
+}
+
+
+Cookie Client::handle_cookie() {
+	std::string cookie_val = _request.get_header_by_key("Cookie");
+	SessionCookieManager& sessionCM = SessionCookieManager::getInstance();
+	Cookie cookie;
+
+	if (!cookie_val.empty()) {
+		std::size_t pos_session_id = cookie_val.find("session_id=");
+		if (pos_session_id != std::string::npos && cookie_val.find(";", pos_session_id) != std::string::npos) {
+			std::string session_id = extractStrBetween(cookie_val, "session_id=", ";");
+			Logger::log(Logger::DEBUG, "Client.cpp", "Found Cookie: " + cookie_val + " Validating...");
+			cookie = sessionCM.getCookieBySessionId(session_id);
 		}
-		reset_last_request();
+	}
+	return cookie;
+}
+
+std::string Client::prepare_cgi_data(const ServerConfig& srv_conf, Cookie cookie) {
+	_request.set_header("X-Forwarded-For", _ip);
+	_request.set_header("X-Forwarded-Port", to_string(srv_conf.get_port()));
+
+	std::string http_cookie;
+	if (!cookie.isEmpty()) {
+		std::string session_status = SessionCookieManager::getInstance().isCookieExpired(cookie) ? "expired" : "valid";
+		http_cookie = "HTTP_COOKIE=session=" + session_status + "; session_id=" + cookie.value;
+	}
+
+	return http_cookie;
+}
+
+void Client::update_cookie_from_response(const std::string& response, Cookie& cookie) {
+    SessionCookieManager& sessionCM = SessionCookieManager::getInstance();
+
+    if (response.find("Set-Cookie: session_id=") != std::string::npos) {
+        std::size_t pos_session_id = response.find("session_id=");
+        if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
+            std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
+            cookie = sessionCM.setCookieBySessionId(session_id, 300);
+        }
+    }
+}
+
+int Client::handle_response(ServerConfig  srv_conf) {
+	std::string path_tmp;
+	std::string rs;
+	std::string rs_start_line = create_start_line(200, "OK");
+	std::string path = _request.get_path();
+	std::vector<std::string> files;
+	Location loc = srv_conf.findMatchingLocation(path);
+	std::string method = _request.get_method();
+
+	try {
+		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
+			throw HttpException::NotAllowedMethodException();
+		if (loc.findScriptPath(path, path_tmp)) {
+			if (loc.get_auto_index()) {
+				files = loc.get_files();
+				Logger::log(Logger::INFO,"Server.cpp", "Generating index: " + path_tmp);
+				rs = generate_index_html(files, path_tmp);
+				rs_start_line.append(rs);
+				send_response(rs_start_line);
+			}
+			throw HttpException::NoContentException();
+		}
+		size_t dot_pos = path_tmp.rfind('.');
+		if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
+		{
+			if (ends_with(path_tmp, ".html")) {
+				if (method != "HEAD")
+					resolve_html_path(path_tmp);
+				else 
+					throw HttpException::NoContentException();
+			} else {
+				//KEEP ALIVE
+				handle_connection(srv_conf, rs_start_line);
+				Cookie cookie = handle_cookie();
+				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
+				CGI cgi(path, _request);
+				cgi.resolve_cgi_env(_request, path_tmp, http_cookie);
+				rs = cgi.execute();
+				update_cookie_from_response(rs, cookie);
+				//RESPONSE
+				rs_start_line.append(rs);
+				send_response(rs_start_line);
+			}
+		}
 		return 0;
-	} else {
-		// Cliente desconectado
-		Logger::log(Logger::ERROR, "Client.cpp", "ERROR: Cliente desconectado, socket fd" + to_string(_socket_fd));
-		return -1;
-	}*/
-/**
- * @brief Envía una respuesta al cliente a través del socket y cierra la conexión.
- * 
- * Este método toma una respuesta en forma de cadena, la envía al cliente utilizando
- * el socket asociado y luego cierra el socket. Si la respuesta no está vacía,
- * imprime en la consola la primera línea de la respuesta (hasta el primer salto de línea).
- * 
- * @param response Referencia a un objeto `std::string` que contiene la respuesta a enviar.
- */
+	}
+	catch(HttpException::NotAllowedMethodException &e) {
+		rs_start_line = create_start_line(405, "Not Allowed Method");
+		std::string path_error = srv_conf.get_error_page_by_code(405);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::BadRequestException &e) {
+		rs_start_line = create_start_line(400, "Bad Request");
+		std::string path_error = srv_conf.get_error_page_by_code(400);
+		rs = resolve_html_path(path_error);
+		
+	}
+	catch(HttpException::NoContentException &e) {
+		rs_start_line = create_start_line(204, "Not Content");
+		std::string path_error = srv_conf.get_error_page_by_code(204);
+		rs = resolve_html_path(path_error);
+		
+	}
+	catch(HttpException::NotFoundException &e) {
+		rs_start_line = create_start_line(404, "Not Found");
+		std::string path_error = srv_conf.get_error_page_by_code(404);
+		rs = resolve_html_path(path_error);
+	}
+	rs_start_line.append(rs);
+	send_response(rs_start_line);
+	return 0;
+}
+
+
 void Client::send_response(std::string &response) {
 	if (!response.empty()) {
 		Logger::log(Logger::INFO, "Client.cpp", response.substr(0, response.find("\n")));
 		send(_socket_fd, response.c_str(), response.size(), 0);
 	}
 }
-/**
- * @brief Envía un mensaje de error HTTP al cliente y cierra la conexión.
- * 
- * Este método construye una respuesta HTTP de error con el código de estado proporcionado
- * y el mensaje correspondiente. Luego, envía la respuesta al cliente a través del socket
- * y cierra la conexión con el cliente.
- * 
- * @param code Código de error HTTP que indica el tipo de error (por ejemplo, 404, 500).
- * @param message Mensaje de error que describe el motivo del error (por ejemplo, "Not Found", "Internal Server Error").
- */
+
 void Client::send_error(int code, const std::string& message) {
 	std::string response = "HTTP/1.1 " + to_string(code) + " " + message + "\r\n\r\n";
 	send(_socket_fd, response.c_str(), response.size(), 0);
@@ -142,12 +305,15 @@ bool  Client::has_max_req(size_t n_req) {
 std::string Client::get_port() const {
 	return _port;
 }
+
 std::string Client::get_ip() const{
 	return _ip;
 }
+
 void Client::set_ip(std::string ip) {
 	_ip = ip;
 }
+
 void Client::set_port(std::string port) {
 	_ip = port;
 }

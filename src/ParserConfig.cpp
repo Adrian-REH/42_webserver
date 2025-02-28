@@ -1,22 +1,14 @@
 
-#include "ParserServer.hpp"
+#include "ParserConfig.hpp"
 
-bool hasDuplicates(const std::vector<Location>& locations) {
-    std::set<Location> uniqueLocations;
-    
-    for (std::vector<Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
-        if (!uniqueLocations.insert(*it).second)
-            return true;
-    return false;
-}
+ParserConfig::ParserConfig(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
 
-ParserServer::ParserServer(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
-
-void ParserServer::init_automata() {
-	_automata_srv["listen "].setSetter(&Server::set_port, Setter<Server>::SIZE_T);
-	_automata_srv["server_name "].setSetter(&Server::set_server_name, Setter<Server>::STRING);
-	_automata_srv["keepalive_timeout "].setSetter(&Server::set_timeout, Setter<Server>::SIZE_T);
-	_automata_srv["keepalive_requests "].setSetter(&Server::set_max_req, Setter<Server>::SIZE_T);
+void ParserConfig::init_automata() {
+	_automata_srv["listen "].setSetter(&ServerConfig::set_port, Setter<ServerConfig>::SIZE_T);
+	_automata_srv["server_name "].setSetter(&ServerConfig::set_server_name, Setter<ServerConfig>::STRING);
+	_automata_srv["keepalive_timeout "].setSetter(&ServerConfig::set_timeout, Setter<ServerConfig>::SIZE_T);
+	_automata_srv["keepalive_requests "].setSetter(&ServerConfig::set_max_req, Setter<ServerConfig>::SIZE_T);
+	_automata_srv["error_page "].setSetter(&ServerConfig::set_error_page, Setter<ServerConfig>::MAP_INT_STR);
 
 	_automata_loc["autoindex "].setSetter(&Location::set_auto_index, Setter<Location>::STRING);
 	_automata_loc["return "].setSetter(&Location::set_redirect_url, Setter<Location>::STRING);
@@ -28,7 +20,7 @@ void ParserServer::init_automata() {
 
 }
 
-LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	LimitExcept limExc;
 	size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
 	size_t bracketPos = it->find("{", lmtPos); // Encuentra el '}' después de "limit_except "
@@ -42,6 +34,7 @@ LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it
 
 	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
+		std::cout << line << std::endl;
 		if (line.find("}") != std::string::npos) { // Fin de limit_except
 			break;
 		}
@@ -65,14 +58,15 @@ LimitExcept ParserServer::parseLimitExcept(std::deque<std::string>::iterator &it
 	return limExc;
 }
 
-Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+Location ParserConfig::parserLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	Location loc;
 	std::map<std::string, Setter<Location> >::iterator aut_it;
 	loc.set_path(extractStrBetween(*it, "location ", " {"));
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
+		std::cout << line << std::endl;
 		if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
-			LimitExcept limExp = parseLimitExcept(it, end);
+			LimitExcept limExp = parserLimitExcept(it, end);
 			loc.set_limit_except(limExp);
 		} else if (line.find("}") != std::string::npos) { // Fin de location
 			return loc;
@@ -96,15 +90,16 @@ Location ParserServer::parseLocation(std::deque<std::string>::iterator &it, std:
 	return loc;
 }
 
-Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
-	Server srv;
-	std::map<std::string, Setter<Server> >::iterator aut_it;
+ServerConfig ParserConfig::parserServerConfig(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
+	ServerConfig srv;
+	std::map<std::string, Setter<ServerConfig> >::iterator aut_it;
 
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
+		std::cout << line << std::endl;
 		if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
-			Location loc = parseLocation(it, end);
-			srv.addLocation(loc);
+			Location loc = parserLocation(it, end);
+			srv.add_location(loc);
 		} else if (line.find("}") != std::string::npos) { // Fin de server
 			return srv;
 		} else {
@@ -113,8 +108,6 @@ Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deq
 					if (aut_it != _automata_srv.end()) {
 						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
 						std::string val = extractStrBetween(line, aut_it->first, ";");
-						//srv.set_port(8080);
-
 						aut_it->second.execute(srv, val);
 					}
 					break;
@@ -123,14 +116,14 @@ Server ParserServer::parseServer(std::deque<std::string>::iterator &it, std::deq
 		
 		}
 	}
-	std::vector<Location> locs = srv.get_locations();
-	if (srv.getPort() ==0  || srv.get_server_name().empty() || locs.empty() || hasDuplicates(locs))
+	std::map<std::string, Location> locs = srv.get_locations();
+	if (srv.get_port() ==0  || srv.get_server_name().empty() || locs.empty())
 		throw std::runtime_error("Error en la configuracion de Srv");
 	return srv;
 
 }
 
-int ParserServer::dumpRawData(const char *file_name)
+int ParserConfig::dumpRawData(const char *file_name)
 {
 	_file_name = file_name;
 	try {
@@ -146,8 +139,8 @@ int ParserServer::dumpRawData(const char *file_name)
  * @brief Itero sobre _content_file y parseando el contenido a configuracion del server
  * Cliente o LimitException, para el funcionamiento del programa
  */
-std::vector<Server> ParserServer::execute(char **env) {
-	std::vector<Server> srvs;
+void ParserConfig::execute(char **env) {
+	Config &conf = Config::getInstance();
 	std::deque<std::string>::iterator it;
 	init_automata();
 	(void)env; // FIXME: Se precisa el env para cada ejecucion de CGI?, o es posible hacerlo sin utilizar el ENV que se envie, de igual forma se puede utilizar 
@@ -155,11 +148,12 @@ std::vector<Server> ParserServer::execute(char **env) {
 		throw std::runtime_error("Error not config");
 	for (it = _content_file.begin(); it != _content_file.end(); ++it) {
 		std::string line = (*it);
+		std::cout << line << std::endl;
 		if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
-			srvs.push_back(parseServer(it, _content_file.end()));
+			conf.addServerConf(parserServerConfig(it, _content_file.end()));
 		}
 	}
-	return srvs;
+
 }
 /* Add allowed methods and search through them to get if its permitted
 */

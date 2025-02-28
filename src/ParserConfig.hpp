@@ -1,11 +1,12 @@
-#ifndef PARSERSERVER_HPP
-#define PARSERSERVER_HPP
+#ifndef PARSERCONFIG_HPP
+#define PARSERCONFIG_HPP
 
 #include "Server.hpp"
 #include "utils/Utils.hpp"
 #include <algorithm>
 #include <set>
 #include <cstdlib>  // Para strtol y strtoul
+#include "Config.hpp"
 
 template <typename T, class Class>
 struct SetterType {
@@ -17,6 +18,7 @@ struct SetterStorage {
 	Class& (Class::*intSetter)(int);
 	Class& (Class::*sizeTSetter)(size_t);
 	Class& (Class::*stringSetter)(const std::string &);
+	Class& (Class::*mapIntStrSetter)(int, std::string );
 };
 
 
@@ -31,7 +33,7 @@ class Setter {
 		};
 		SetterStorage<Class> setter;
 
-		enum Type { INT, SIZE_T, STRING, BOOL } type;
+		enum Type { INT, SIZE_T, STRING, MAP_INT_STR } type;
 
 		Setter() : type(INT) {}
 	
@@ -49,9 +51,14 @@ class Setter {
 			type = t;
 		}
 	
+		void setSetter(Class& (Class::*method)(int , std::string), Type t) {
+			setter.mapIntStrSetter = method;
+			type = t;
+		}
 		// Método para ejecutar el setter
 		void execute(Class &srv, std::string val) {
 			//srv.set_port(8080);
+			std::deque<std::string> args = split(val, ' ');
 
 			char *endp = NULL;
 			int resultInt = 0;
@@ -59,18 +66,31 @@ class Setter {
 			switch (type) {
 				case Setter::INT:
 					resultInt = static_cast<int>(std::strtod(val.c_str(), &endp));
+					if (*endp != '\0' && *endp != 'M')
+						throw Config::ConfigNotFoundException();
 					(void)resultInt;
 					if (setter.intSetter)
 						(srv.*setter.intSetter)(resultInt);
 					break;
 				case Setter::STRING:
+					if (val.empty())
+						throw Config::ConfigNotFoundException();
 					if (setter.stringSetter)
 						(srv.*setter.stringSetter)(val);
 					break;
 				case Setter::SIZE_T:
 					resultSizeT = static_cast<size_t>(std::strtod(val.c_str(), &endp));
+					if (*endp != '\0')
+						throw Config::ConfigNotFoundException();
 					if (setter.sizeTSetter)
 						(srv.*setter.sizeTSetter)(resultSizeT);
+					break;
+				case Setter::MAP_INT_STR:
+					if (args.size() != 2)
+						throw Config::ConfigNotFoundException();
+					resultInt = static_cast<int>(std::strtod(args[0].c_str(), &endp));
+					if (setter.mapIntStrSetter)
+						(srv.*setter.mapIntStrSetter)(resultInt, args[1]);
 					break;
 				default:
 					break;
@@ -78,27 +98,27 @@ class Setter {
 		}
 };
 
-class ParserServer {
+class ParserConfig {
 
 	private:
 		const char *_file_name;
 		std::deque<std::string> _content_file;
 
-		LimitExcept parseLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
-		Location parseLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
-		Server parseServer(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
+		LimitExcept parserLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
+		Location parserLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
+		ServerConfig parserServerConfig(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
 
-		std::map<std::string, Setter<Server> > _automata_srv;
+		std::map<std::string, Setter<ServerConfig> > _automata_srv;
 		std::map<std::string, Setter<Location > > _automata_loc;
 		std::map<std::string, Setter<LimitExcept> > _automata_limexc;
 		
 	public:
 		void init_automata();
-		ParserServer(const char *file_name = "ws.conf");
+		ParserConfig(const char *file_name = "ws.conf");
 		int dumpRawData(const char *file_name);
 		/**
-		 * @brief Busco en el archivo la configuracion necesaria para Server
+		 * @brief Busco en el archivo la configuracion necesaria para ServerConfig
 		 */
-		std::vector<Server> execute(char **env);
+		void execute(char **env);
 };
 #endif

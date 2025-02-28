@@ -6,6 +6,8 @@
 #include <map>
 #include "utils/Utils.hpp"
 #include "Logger.hpp"
+#include "HttpException.hpp"
+#include "Request.hpp"
 
 /**
  * @brief Clase para gestionar la ejecución de scripts CGI.
@@ -16,8 +18,7 @@
 class CGI {
 	private:
 		std::string _script_path;
-		std::string _method;
-		std::string _body;
+		Request _request;
 		char** _env;
 
 	public:
@@ -29,7 +30,7 @@ class CGI {
 		 * @param body Cuerpo de la solicitud HTTP.
 		 * @param env Variables de entorno para la ejecución.
 		 */
-		CGI(const std::string& script_path, const std::string& method, const std::string& body, char** env);
+		CGI(const std::string& script_path, Request request, char** env = NULL);
 		/**
 		 * @brief Determina el intérprete adecuado para el script según su extensión.
 		 * 
@@ -38,7 +39,9 @@ class CGI {
 		 */
 		std::string determine_interpreter() const;
 
-		int parse_request_details(std::map<std::string, std::string> headers);
+		int resolve_cgi_env(Request req, std::string script_path, std::string http_cookie);
+
+
 		/**
 		 * @brief Ejecuta el script CGI y devuelve su salida.
 		 * 

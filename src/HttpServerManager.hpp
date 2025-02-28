@@ -20,7 +20,7 @@ class HttpServerManager {
 	public:
 		HttpServerManager();
 		int manageIdleClients(struct epoll_event*events, int nfds);
-		int start(std::vector<Server> srvs);
+		int start();
 		void stop();
 };
 
