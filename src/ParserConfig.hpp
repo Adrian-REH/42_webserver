@@ -86,7 +86,6 @@ class Setter {
 						else
 							throw Config::ConfigNotFoundException();
 					}
-						throw Config::ConfigNotFoundException();
 					if (setter.sizeTSetter)
 						(srv.*setter.sizeTSetter)(resultSizeT);
 					break;
