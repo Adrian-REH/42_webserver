@@ -5,8 +5,8 @@
 #include "utils/Utils.hpp"
 #include "Logger.hpp"
 #include "Location.hpp"
-
-
+#include <set>
+#include "HttpException.hpp"
 
 /**
  * @class Request
@@ -50,12 +50,13 @@ class Request {
 		 * @param content_length Tamaño esperado del cuerpo, según el encabezado Content-Length.
 		 * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
 		 */
-		void parse_body(const std::string& body_section, unsigned long content_length);
+		void parse_body(const std::string& body_section, size_t content_length);
 
 		void receiving_headers();
 		void receiving_body(std::string body_section);
-
 		void read_chunked_body();
+		bool is_chunked_request();
+		
 	public:
 		Request();
 
