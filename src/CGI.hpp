@@ -17,6 +17,7 @@
  */
 class CGI {
 	private:
+		std::string _working_dir;
 		std::string _script_path;
 		Request _request;
 		char** _env;
@@ -30,7 +31,7 @@ class CGI {
 		 * @param body Cuerpo de la solicitud HTTP.
 		 * @param env Variables de entorno para la ejecución.
 		 */
-		CGI(const std::string& script_path, Request request, char** env = NULL);
+		CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env = NULL);
 		/**
 		 * @brief Determina el intérprete adecuado para el script según su extensión.
 		 * 

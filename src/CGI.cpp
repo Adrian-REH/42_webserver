@@ -3,8 +3,8 @@
 #include "Request.hpp"
 
 
-CGI::CGI(const std::string& script_path, Request request, char** env)
-	: _script_path(script_path), _request(request), _env(env) {}
+CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env)
+	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env) {}
 
 /**
  * @brief Determina el intérprete adecuado para el script según su extensión.
@@ -38,7 +38,7 @@ int CGI::resolve_cgi_env(Request req, std::string script_path, std::string http_
 	env_strings.push_back("SERVER_PROTOCOL=HTTP/1.1");
 	env_strings.push_back("HTTP_USER_AGENT=" + req.get_header_by_key("User-Agent"));
 	env_strings.push_back("HTTP_REFERER=" + req.get_header_by_key("Referer"));
-	env_strings.push_back("ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding"));
+	env_strings.push_back("HTTP_ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding"));
 
 	_env = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); ++i) {
@@ -71,6 +71,10 @@ std::string CGI::execute() {
 
 	if (pid == 0) {
 		try {
+			if (chdir(_working_dir.c_str()) == -1) {
+				exit(errno);// failure exit from CHILD PROCESS
+			}
+
 			std::string interpreter = determine_interpreter();
 			char* argv[] = {
 				(char*)interpreter.c_str(),
@@ -89,13 +93,12 @@ std::string CGI::execute() {
 			exit(2);
 		}
 	} else {
-		//size_t bytes_written = 0;
-		std::cout<< "BOOOODYY: " << _request.get_body() << std::endl;
+		
 		write(io[1], _request.get_body().c_str(), _request.get_body().size() );
 		close(io[1]);
 		// Padre: Leer la salida del hijo
 		waitpid(pid, &status, 0);
-		//status = WEXITSTATUS(status);
+
 		int ret;
 		if (WIFEXITED(status)){
 			ret = WEXITSTATUS(status);
