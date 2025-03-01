@@ -231,10 +231,13 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
+				std::string root_dir = loc.get_root_directory();
 				script_path = extractStrEnd(script_path, loc.get_root_directory());
 				if (script_path[0] == '/')
 					script_path.erase(0, 1);
-				CGI cgi(loc.get_root_directory() , script_path, _request);
+				if (root_dir[0] == '/')
+					root_dir.erase(0, 1);
+				CGI cgi(root_dir, script_path, _request);
 				cgi.resolve_cgi_env(_request, http_cookie);
 				rs = cgi.execute();
 				update_cookie_from_response(rs, cookie);
