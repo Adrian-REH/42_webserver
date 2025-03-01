@@ -13,7 +13,7 @@ class Location {
 		std::vector<std::string> _files; // Todos los archivos con la _type_extension.
 		std::string _root_directory;  // Directorio o archivo que se sirve.
 		bool _auto_index;  // Para listar directorios.
-		int _client_max_body_size;  // Tamaño máximo del cuerpo de la solicitud (si se aplica).
+		size_t _client_max_body_size;  // Tamaño máximo del cuerpo de la solicitud (si se aplica).
 		std::string _path_upload_directory;  // Para subir archivos.
 	public:
 		Location();
@@ -84,7 +84,7 @@ class Location {
 		 * @param cli_max_body_size The maximum body size allowed for client requests.
 		 * @return A reference to the current Location object for method chaining.
 		 */
-		Location &set_client_max_body_size(const int cli_max_body_size);
+		Location &set_client_max_body_size(const size_t cli_max_body_size);
 		
 
 		/**
@@ -109,7 +109,7 @@ class Location {
 
 		LimitExcept get_limit_except() const;
 
-		int get_client_max_body_size() const;
+		size_t get_client_max_body_size() const;
 
 		std::string get_root_directory() const;
 		/**

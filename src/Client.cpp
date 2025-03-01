@@ -97,9 +97,14 @@ int Client::handle_request(ServerConfig srv_conf) {
 			_request.set_location(loc);
 		}
 	} catch (HttpException::BadRequestException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		_error = std::make_pair<int, std::string>(400, "Bad Request");
 	} catch (HttpException::NotFoundException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		_error = std::make_pair<int, std::string>(404, "Not Found");
+	} catch (HttpException::RequestEntityTooLargeException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		_error = std::make_pair<int, std::string>(413, "Request Entity Too Large");
 	}
 	return 0;
 }

@@ -40,7 +40,7 @@ class CGI {
 		 */
 		std::string determine_interpreter() const;
 
-		int resolve_cgi_env(Request req, std::string script_path, std::string http_cookie);
+		int resolve_cgi_env(Request, std::string);
 
 
 		/**
