@@ -50,7 +50,11 @@ class HttpException  {
 				return "408 Request Timeout";
 			}
 	};
-
+	/*
+	//TODO: If the condition is temporary, the server SHOULD include a Retry-
+   			After header field to indicate that it is temporary and after what
+   			time the client MAY try again.
+	*/
 	class RequestEntityTooLargeException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
