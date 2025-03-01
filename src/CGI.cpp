@@ -3,8 +3,8 @@
 #include "Request.hpp"
 
 
-CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env)
-	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env) {}
+CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
+	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout) {}
 
 /**
  * @brief Determina el intérprete adecuado para el script según su extensión.
@@ -95,11 +95,27 @@ std::string CGI::execute() {
 		}
 	} else {
 		
-		write(io[1], _request.get_body().c_str(), _request.get_body().size() );
+		write(io[1], _request.get_body().c_str(), _request.get_body().size());
 		close(io[1]);
-		// Padre: Leer la salida del hijo
-		waitpid(pid, &status, 0);
+		fd_set set;
+		struct timeval timeout;
+		timeout.tv_sec = _exec_timeout;
+		timeout.tv_usec = 0;
+		FD_ZERO(&set);
+		FD_SET(io[0], &set);
 
+		/**
+		 * Escucho el estado del fd io[0] +1, en caso de que cambie su estado(alguienn escriba sobre el) antes de timeout entonces result = numero de fds escritos
+		 * Si en caso de que no se escriba sobre el hasta o luego de llegar a timeout, select devolvera 0fds escritos y ejecutare un error
+		 */
+		int nfds = select(io[0] + 1, &set, NULL , NULL, &timeout);
+		if (nfds == 0) {
+			kill(pid, SIGKILL);
+			throw HttpException::RequestTimeoutException("Timeout CGI execution");
+		} else if (nfds < 0)
+			throw HttpException::InternalServerErrorException();
+		//Obtengo el estado del pid
+		waitpid(pid, &status, 0);
 		int ret;
 		if (WIFEXITED(status)){
 			ret = WEXITSTATUS(status);
@@ -109,8 +125,6 @@ std::string CGI::execute() {
 			ret = WTERMSIG(status);
 			//Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
 		}
-			
-		// TODO: Intentar devolver multiples codigos de error
 		std::string result = readFd(io[0]);
 		close(io[0]);
 		if (ret) {
@@ -118,7 +132,6 @@ std::string CGI::execute() {
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
 			throw HttpException::InternalServerErrorException();
 		}
-
 		return (result);
 	}
 }
