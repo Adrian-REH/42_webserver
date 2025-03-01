@@ -42,6 +42,12 @@ class HttpException  {
 				return "301 Moved Permanently redirection";
 			}
 	};
+	class RequestEntityTooLargeException : public std::exception {
+		public:
+			virtual const char* what() const throw() {
+				return "413 Request Entity Too Large";
+			}
+	};
 };
 
 
