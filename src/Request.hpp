@@ -23,6 +23,7 @@ class Request {
 		std::string _client_ip;
 		std::string _body;
 		std::string _query_string;
+		Location _location;
 		std::map<std::string, std::string> _headers;
 		int _state;
 		enum { INIT, RECEIVING_HEADERS, RECEIVING_BODY, DONE };
@@ -74,6 +75,8 @@ class Request {
 		std::string get_method() const;
 		std::string get_protocol() const;
 		std::string get_body() const;
+		void set_location(Location& loc);
+		Location get_location() const;
 		int get_state() const;
 		std::string get_header_by_key(const std::string &key);
 		std::map<std::string, std::string> get_headers() const;

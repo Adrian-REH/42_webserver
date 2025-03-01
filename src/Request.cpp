@@ -1,5 +1,6 @@
 
 #include "Request.hpp"
+#include "Location.hpp"
 
 const std::string CONTENT_LENGTH = "Content-Length";
 
@@ -221,6 +222,14 @@ std::string Request::get_protocol() const {
 
 std::string Request::get_body() const {
 	return _body;
+}
+
+void Request::set_location(Location& loc) {
+	_location = loc;
+}
+
+Location Request::get_location() const {
+	return _location;
 }
 
 std::string Request::get_query_string()const {
