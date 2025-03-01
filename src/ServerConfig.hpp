@@ -6,7 +6,7 @@
 #include <string>
 #include "Cookie.hpp"
 #include "Location.hpp"
-
+#include <cmath>
 class ServerConfig {
 	private:
 		int _port;
@@ -37,7 +37,7 @@ class ServerConfig {
 
 	class LocationRepeateException : public std::exception {
 		public:
-			virtual const char *what() {
+			virtual const char *what() const throw() {
 				return "Repeate Location paths";
 			}
 	};

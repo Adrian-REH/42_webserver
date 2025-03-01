@@ -232,7 +232,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
 				CGI cgi(loc.get_root_directory() ,script_path, _request);
-				cgi.resolve_cgi_env(_request, script_path, http_cookie);
+				cgi.resolve_cgi_env(_request, http_cookie);
 				rs = cgi.execute();
 				update_cookie_from_response(rs, cookie);
 				//RESPONSE
