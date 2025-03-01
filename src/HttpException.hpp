@@ -24,9 +24,10 @@ class HttpException  {
 			std::string _message;
 
 		public:
-			BadRequestException(std::string message = ""): _message(message) {}
+			BadRequestException(std::string message = ""): _message("400 Bad Request : " + message) {}
+			virtual ~BadRequestException() throw() {}
 			virtual const char* what() const throw() {
-				return ("400 Bad Request : " + _message).c_str();
+				return (_message).c_str();
 			}
 	};
 
@@ -45,9 +46,13 @@ class HttpException  {
 	};
 
 	class RequestTimeoutException : public std::exception {
+		private:
+			std::string _message;
 		public:
+			RequestTimeoutException(std::string message = ""): _message("408 Request Timeout : " + message) {}
+			virtual ~RequestTimeoutException() throw() {}
 			virtual const char* what() const throw() {
-				return "408 Request Timeout";
+				return (_message).c_str();
 			}
 	};
 	/*

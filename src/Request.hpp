@@ -27,6 +27,10 @@ class Request {
 		Location _location;
 		std::map<std::string, std::string> _headers;
 		int _state;
+		size_t _body_timeout;
+		size_t _body_time;
+		size_t _header_time;
+		size_t _header_timeout;
 		enum { INIT, RECEIVING_HEADERS, RECEIVING_BODY, DONE };
 	
 		/**

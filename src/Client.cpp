@@ -108,6 +108,9 @@ int Client::handle_request(ServerConfig srv_conf) {
 	} catch (HttpException::HTTPVersionNotSupportedException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		_error = std::make_pair<int, std::string>(505, "HTTP Version Not Supported");
+	} catch (HttpException::RequestTimeoutException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		_error = std::make_pair<int, std::string>(408, "Request Timeout Exception");
 	}
 	
 	return 0;
@@ -283,6 +286,12 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		rs = "Content-Type: text/html\r\n";
 		rs.append("Location: "+ loc.get_redirect_url() +"\r\n\r\n");
 		rs.append("<html><body>Redirigiendo...</body></html>");
+	}
+	catch(HttpException::RequestTimeoutException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(408, "Request Timeout");
+		std::string path_error = srv_conf.get_error_page_by_code(404);
+		rs = resolve_html_path(path_error);
 	}
 	rs_start_line.append(rs);
 	send_response(rs_start_line);

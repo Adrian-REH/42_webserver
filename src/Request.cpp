@@ -165,7 +165,6 @@ void Request::read_chunked_body(){
 			if (_headers.find("Trailer") != _headers.end())
 			{
 				size_t trailer_end = line.find("\r");
-				std::set<std::string> not_permitted = {"Transfer-Encoding", "Content-Length", "Trailer"};
 				while (line != "\r" && trailer_end != std::string::npos)
 				{
 					//std::string header = line.substr(0, trailer_end);
@@ -200,8 +199,16 @@ bool Request::is_chunked_request() {
 }
 
 
-Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""), _query_string(""), _state(INIT) {}
+Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body(""), _query_string(""),
+ _state(INIT), _body_timeout(60), _body_time(0), _header_time(0), _header_timeout(60) {}
 
+
+bool isExpired(size_t expiration) {
+	std::time_t currentTime = std::time(0);
+	return difftime(currentTime, expiration) > 0;
+}
+
+//TODO: _timeot
 /**
  * @brief Analiza una solicitud HTTP a partir de un buffer.
  * 
@@ -212,15 +219,27 @@ Request::Request(): _raw_req(""), _method(""), _path(""), _protocol(""), _body("
  * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
  */
 void Request::parser(std::string req) {
+	//size_t content_length = 0; TODO: usar
 	Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
-
 	if (_state == INIT || _state == RECEIVING_HEADERS) {
+		if (_header_time == 0)
+			_header_time = std::time(0) + _header_timeout;
 		_raw_req += req;
 		receiving_headers();
+		if (isExpired(_header_time)) {
+			_state = DONE;
+			throw HttpException::RequestTimeoutException("Timeout header read");
+		}
 	} else if (_state == RECEIVING_BODY) {
-
+		if (_body_time == 0)
+			_body_time = std::time(0) + _body_timeout;
 		receiving_body(req);
+		if (isExpired(_body_time)){
+			_state = DONE;
+			throw HttpException::RequestTimeoutException("Timeout body read");
+		}
 	}
+	//TODO: Controlar si está DONE?
 }
 
 
