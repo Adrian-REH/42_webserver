@@ -105,7 +105,11 @@ int Client::handle_request(ServerConfig srv_conf) {
 	} catch (HttpException::RequestEntityTooLargeException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		_error = std::make_pair<int, std::string>(413, "Request Entity Too Large");
+	} catch (HttpException::HTTPVersionNotSupportedException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		_error = std::make_pair<int, std::string>(505, "HTTP Version Not Supported");
 	}
+	
 	return 0;
 }
 
