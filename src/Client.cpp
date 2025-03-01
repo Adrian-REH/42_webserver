@@ -18,7 +18,7 @@
  * @param socket_fd Descriptor de archivo del socket asociado al cliente.
  */
 Client::Client(int socket_fd, std::time_t _last_request, size_t n_req) :_socket_fd(socket_fd),
-	_last_request(_last_request), _n_request(n_req),_request() {}
+	_last_request(_last_request), _n_request(n_req),_request(), _error(std::make_pair(0, "")) {}
 /**
  * @brief Destructor de la clase `Client`.
  * 
@@ -92,13 +92,14 @@ int Client::handle_request(ServerConfig srv_conf) {
 		}
 		_request.parser(request_data);
 		Location loc;
-		if (!_request.get_path().empty() && _request.get_location().isEmpty()) {
-			_request.set_location(srv_conf.findMatchingLocation(_request.get_path()));
+		if (!_request.get_path().empty() && _request.get_location().empty()) {
+			loc = srv_conf.findMatchingLocation(_request.get_path());
+			_request.set_location(loc);
 		}
-		std::string path_tmp;
-	} catch (HttpException &e) {
-		//CLient conoce el error
-		//Logger::ERROR....
+	} catch (HttpException::BadRequestException &e) {
+		_error = std::make_pair<int, std::string>(400, "Bad Request");
+	} catch (HttpException::NotFoundException &e) {
+		_error = std::make_pair<int, std::string>(404, "Not Found");
 	}
 	return 0;
 }
@@ -188,6 +189,15 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	Location loc = srv_conf.findMatchingLocation(path);
 	std::string method = _request.get_method();
 	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
+
+	if (has_error()){
+		rs_start_line = create_start_line(_error.first, _error.second);
+		std::string path_error = srv_conf.get_error_page_by_code(204);
+		rs = resolve_html_path(path_error);
+		rs_start_line.append(rs);
+		send_response(rs_start_line);
+		return 0;
+	}
 	try {
 		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
 			throw HttpException::NotAllowedMethodException();
@@ -300,4 +310,8 @@ void Client::set_ip(std::string ip) {
 
 void Client::set_port(std::string port) {
 	_ip = port;
+}
+
+bool Client::has_error() {
+	return (_error.first == 0 && _error.second.empty());
 }

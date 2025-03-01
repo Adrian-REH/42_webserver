@@ -26,6 +26,7 @@ class Client {
 		size_t _last_request;
 		size_t _n_request;
 		Request _request;
+		std::pair<int, std::string> _error;
 		void handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line);
 		Cookie handle_cookie();
 		std::string prepare_cgi_data( const ServerConfig &srv_conf, Cookie cookie);
@@ -68,6 +69,7 @@ class Client {
 		 * @return El descriptor de archivo del socket asociado al cliente.
 		 */
 		int get_socket_fd() const;
+		bool has_error();
 		void reset_last_request();
 		/**
 		 * @brief Método para recibir datos desde un socket y procesar la solicitud recibida.
