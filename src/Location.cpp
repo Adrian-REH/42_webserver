@@ -1,7 +1,7 @@
 
 #include "Location.hpp"
 
-Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false), _client_max_body_size(0),_path_upload_directory("") {}
+Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false), _client_max_body_size(1000000),_path_upload_directory("") {}
 
 Location &Location::set_root_directory(const std::string &root) {
 	_root_directory = root;
@@ -67,6 +67,14 @@ std::vector<std::string> Location::get_files() const {
 
 LimitExcept Location::get_limit_except() const {
 	return _limit_except;
+}
+
+int Location::get_client_max_body_size() const {
+	return _client_max_body_size;
+}
+
+std::string Location::get_root_directory() const {
+	return _root_directory;
 }
 
 Location Location::build() {

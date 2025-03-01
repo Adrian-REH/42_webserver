@@ -85,6 +85,7 @@ class Location {
 		 * @return A reference to the current Location object for method chaining.
 		 */
 		Location &set_client_max_body_size(const int cli_max_body_size);
+		
 
 		/**
 		 * @brief Set the redirect URL for this location.
@@ -107,6 +108,10 @@ class Location {
 		std::vector<std::string> get_files() const;
 
 		LimitExcept get_limit_except() const;
+
+		int get_client_max_body_size() const;
+
+		std::string get_root_directory() const;
 		/**
 		 * @brief Finalize the configuration and build the Location object.
 		 * 
