@@ -211,7 +211,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		if (loc.findScriptPath(path, script_path)) {
 			if (loc.get_auto_index()) {
 				files = loc.get_files();
-				Logger::log(Logger::INFO,"Server.cpp", "Generating index: " + script_path);
+				Logger::log(Logger::INFO,"Client.cpp", "Generating index: " + script_path);
 				rs = generate_index_html(files, script_path);
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
@@ -261,7 +261,6 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		rs_start_line = create_start_line(204, "Not Content");
 		std::string path_error = srv_conf.get_error_page_by_code(204);
 		rs = resolve_html_path(path_error);
-		
 	}
 	catch(HttpException::NotFoundException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
@@ -319,5 +318,5 @@ void Client::set_port(std::string port) {
 }
 
 bool Client::has_error() {
-	return (_error.first == 0 && _error.second.empty());
+	return (_error.first != 0 && !_error.second.empty());
 }
