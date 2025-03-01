@@ -18,11 +18,14 @@ void Request::parse_start_line(const std::string& start_line) {
 	}
 	_method = parts[0];
 	_path = parts[1];
-	if (parts.size() > 1) {
-		size_t pos = parts[1].find('?');
-		if (pos != std::string::npos)
-			_query_string = parts[1].substr(pos+1);
-	}
+
+	if (_path.size() > 1024)
+		throw HttpException::RequestURITooLongException();
+	
+	size_t pos = _path.find('?');
+	if (pos != std::string::npos)
+		_query_string = _path.substr(pos + 1);
+
 	_protocol = parts[2];
 	if (_protocol != PROTOCOL)
 		throw HttpException::HTTPVersionNotSupportedException();

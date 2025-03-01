@@ -67,6 +67,13 @@ class HttpException  {
 			}
 	};
 
+	class RequestURITooLongException : public std::exception {
+		public:
+			virtual const char* what() const throw() {
+				return "414 Request-URI Too Long";
+			}
+	};
+
 	class InternalServerErrorException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
