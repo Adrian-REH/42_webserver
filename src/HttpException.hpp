@@ -31,6 +31,14 @@ class HttpException  {
 			}
 	};
 
+	class ForbiddenException : public std::exception {
+		public:
+			virtual const char* what() const throw() {
+				return "403 Forbidden";
+			}
+	};
+
+
 	class NotFoundException : public std::exception {
 		public:
 			virtual const char* what() const throw() {

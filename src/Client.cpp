@@ -126,7 +126,7 @@ std::string resolve_html_path(std::string path) {
 	rs = "Content-Type: text/html\r\n\r\n";
 	std::ifstream	inFile(path.c_str());
 	if (!inFile)
-		throw HttpException::InternalServerErrorException();
+		throw HttpException::ForbiddenException();
 	std::string line;
 	while (std::getline(inFile, line))
 		rs += line + "\n";
@@ -222,9 +222,11 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				rs = generate_index_html(files, script_path);
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
+				return 0;
 			}
-			throw HttpException::NoContentException();
+			throw HttpException::NotFoundException();
 		}
+
 		size_t dot_pos = script_path.rfind('.');
 		if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
 		{
@@ -235,6 +237,11 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					throw HttpException::NoContentException();
 			} else {
 				//KEEP ALIVE
+				std::string tmp = script_path;
+				if (tmp[0] == '/')
+					tmp.erase(0, 1);
+				if (access(tmp.c_str(), R_OK) == -1)
+					throw HttpException::ForbiddenException();
 				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
@@ -307,7 +314,12 @@ void Client::send_response(std::string &response) {
 }
 
 void Client::send_error(int code, const std::string& message) {
-	std::string response = "HTTP/1.1 " + to_string(code) + " " + message + "\r\n\r\n";
+	std::string response = "HTTP/1.1 " + to_string(code) + " " + message + "\r\n";
+	response.append("Content-Type: text/html\r\n\r\n");
+	response.append("<!DOCTYPE html>\n<html>");
+	response.append("<head><title>" + to_string(code) +" "+ message + "</title></head>");
+	response.append("<body><center><h1>" + to_string(code) +" "+ message + "</h1></center> <hr><center>We Served/1.22.1</center> </body></html>");
+	response.append("\r\n\r\n");
 	send(_socket_fd, response.c_str(), response.size(), 0);
 }
 

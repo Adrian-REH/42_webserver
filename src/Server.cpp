@@ -148,7 +148,12 @@ int Server::handle_output_client(int client_fd) {
 	try {
 		Config& conf = Config::getInstance();
 		client->handle_response(conf.getServerConfByServerName(_server_name));
-	} catch (std::exception &e) {
+	} catch (HttpException::ForbiddenException &e) {
+		client->send_error(403, "Forbidden");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
+	} catch (HttpException::InternalServerErrorException &e) {
 		client->send_error(500, "Internal Server Error");
 		std::string val(e.what());
 		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
