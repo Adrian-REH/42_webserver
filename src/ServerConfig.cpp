@@ -88,7 +88,7 @@ int countOccurrences(const std::string& str, const std::string& sub) {
 Location ServerConfig::findMatchingLocation(const std::string path) {
 	std::map<std::string, Location>::iterator it = _locations_conf.find(path);
 	Location loc_ocurrence;
-	int tmp_max_ocurrences;
+	int tmp_max_ocurrences = 0;
 	if (it == _locations_conf.end()) {
 		for (it = _locations_conf.begin(); it != _locations_conf.end(); it++) {
 			std::string prefix = it->first;

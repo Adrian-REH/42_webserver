@@ -41,7 +41,7 @@ void Request::parse_headers(const std::string& headers_section) {
 			std::string key = line.substr(0, colon_pos);
 			std::string value = strtrim(line.substr(colon_pos + 2));
 			_headers[key] = value;
-			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
+			//Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
 	}
 	//Si es importante algun header, como el HOST entonces doy error si no lo encuentro

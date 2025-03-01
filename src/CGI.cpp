@@ -62,6 +62,7 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 std::string CGI::execute() {
 	int status;
 	int io[2];
+
 	if (pipe(io) < 0)
 		throw HttpException::InternalServerErrorException();
 
@@ -78,7 +79,7 @@ std::string CGI::execute() {
 			std::string interpreter = determine_interpreter();
 			char* argv[] = {
 				(char*)interpreter.c_str(),
-				(char*)_script_path.c_str() + 1, // Quito el primer caracter '/'
+				(char*)_script_path.c_str() , // Quito el primer caracter '/'
 				NULL
 			};
 			dup2(io[1], STDOUT_FILENO);
