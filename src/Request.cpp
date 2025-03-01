@@ -139,6 +139,7 @@ void Request::read_chunked_body(){
 	size_t chunk_size;
 	size_t full_size = 0;
 	bool is_size_line = true;
+	std::string decoded_body;
 	
 	while (std::getline(stream, line) && line != "\r") {
 		if (is_size_line)
@@ -151,7 +152,7 @@ void Request::read_chunked_body(){
 			}
 			//std::cout << "size_line " << size_line << std::endl;
 			// Read body chunk
-			chunk_size = to_hex_ulong(size_line.substr(0, line.find(";")));
+			chunk_size = to_hex_ulong(size_line.substr(0, size_line.find(";")));
 			full_size += chunk_size;
 			if (full_size > _location.get_client_max_body_size())
 				throw HttpException::RequestEntityTooLargeException();
@@ -181,6 +182,7 @@ void Request::read_chunked_body(){
 			}
 			_headers[CONTENT_LENGTH] = full_size;
 			//ENDING OF BODY
+			_body = decoded_body;
 			_state = DONE;
 			Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE CHUNKED BODY");
 			return ;
@@ -188,9 +190,12 @@ void Request::read_chunked_body(){
 		{
 			//KEEP READING BYTES
 			is_size_line = false;
-			chunk_size -= line.substr(0, line.find("\r")).size() - 2;
+			decoded_body += (line + "\n");
+			chunk_size -= line.size() - 1;
 		} else if (line.substr(0, line.find("\r")).size() > chunk_size)
-			throw HttpException::BadRequestException("Body chunk of wrong size."); // 
+			throw HttpException::BadRequestException("Body chunk of wrong size."); //
+		else 
+			decoded_body += line.substr(0, line.find("\r"));
 	}
 }
 
