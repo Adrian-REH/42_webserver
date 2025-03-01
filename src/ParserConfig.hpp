@@ -66,7 +66,7 @@ class Setter {
 			switch (type) {
 				case Setter::INT:
 					resultInt = static_cast<int>(std::strtod(val.c_str(), &endp));
-					if (*endp != '\0' && *endp != 'M')
+					if (*endp != '\0')
 						throw Config::ConfigNotFoundException();
 					(void)resultInt;
 					if (setter.intSetter)
@@ -80,7 +80,12 @@ class Setter {
 					break;
 				case Setter::SIZE_T:
 					resultSizeT = static_cast<size_t>(std::strtod(val.c_str(), &endp));
-					if (*endp != '\0')
+					if (*endp != '\0') {
+						if (*endp == 'M' && !std::isinf(static_cast<size_t>(resultSizeT * 1000000)) && !std::isnan(static_cast<size_t>(resultSizeT * 1000000)) )
+							resultSizeT = static_cast<size_t>(resultSizeT * 1000000);
+						else
+							throw Config::ConfigNotFoundException();
+					}
 						throw Config::ConfigNotFoundException();
 					if (setter.sizeTSetter)
 						(srv.*setter.sizeTSetter)(resultSizeT);

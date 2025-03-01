@@ -14,7 +14,7 @@ void ParserConfig::init_automata() {
 	_automata_loc["return "].setSetter(&Location::set_redirect_url, Setter<Location>::STRING);
 	_automata_loc["index "].setSetter(&Location::set_index, Setter<Location>::STRING);
 	_automata_loc["root "].setSetter(&Location::set_root_directory, Setter<Location>::STRING);
-	_automata_loc["client_max_body_size "].setSetter(&Location::set_client_max_body_size, Setter<Location>::INT);
+	_automata_loc["client_max_body_size "].setSetter(&Location::set_client_max_body_size, Setter<Location>::SIZE_T);
 	_automata_loc["upload_store "].setSetter(&Location::set_path_upload_directory, Setter<Location>::STRING);
 	_automata_limexc["deny"].setSetter(&LimitExcept::setDenyAction, Setter<LimitExcept>::STRING);
 
