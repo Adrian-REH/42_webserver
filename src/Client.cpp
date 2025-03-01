@@ -232,6 +232,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
 				script_path = extractStrEnd(script_path, loc.get_root_directory());
+				if (script_path[0] == '/')
+					script_path.erase(0, 1);
 				CGI cgi(loc.get_root_directory() , script_path, _request);
 				cgi.resolve_cgi_env(_request, http_cookie);
 				rs = cgi.execute();
