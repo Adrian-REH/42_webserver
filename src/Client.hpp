@@ -79,7 +79,7 @@ class Client {
 		 * @return true Si se reciben datos correctamente y se procesan.
 		 * @return false Si el cliente se desconecta o no se reciben datos.
 		 */
-		int handle_request();
+		int handle_request(ServerConfig);
 		/**
 		 * @brief Envía una respuesta al cliente a través del socket y cierra la conexión.
 		 * 

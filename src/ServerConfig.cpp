@@ -1,6 +1,7 @@
 #include "ServerConfig.hpp"
 #include "Logger.hpp"
 #include "Config.hpp"
+#include "HttpException.hpp"
 
 ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) {
 	_error_pages[400] = "/html/400.html";
@@ -100,7 +101,7 @@ Location ServerConfig::findMatchingLocation(const std::string path) {
 			}
 		}
 		if (loc_ocurrence.empty())
-			throw std::runtime_error("There is no occurrence of location with the path sent");
+			throw HttpException::NotFoundException();
 		return loc_ocurrence;
 	}
 	return it->second;

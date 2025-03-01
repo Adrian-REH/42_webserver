@@ -132,14 +132,13 @@ int Server::handle_input_client(int client_fd) {
 		return -1;
 	}
 
-	try {
-		if (client->handle_request() < 0)
-			return -1;
-	} catch (const std::exception &e)
-	{
-		std::cerr <<"Exception: " << e.what() << std::endl;
-		//return -1;
+
+	ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_server_name);
+
+	if (client->handle_request(srv_conf) < 0) {
+		return -1;
 	}
+
 	return 0;
 }
 

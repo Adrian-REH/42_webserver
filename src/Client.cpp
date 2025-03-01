@@ -61,36 +61,45 @@ void Client::reset_last_request() {
  * @return true Si se reciben datos correctamente y se procesan.
  * @return false Si el cliente se desconecta o no se reciben datos.
  */
-int Client::handle_request() {
-	char buffer[1024];
-	std::string request_data;
-	int bytes_received;
+int Client::handle_request(ServerConfig srv_conf) {
+	try {
+		char buffer[1024];
+		std::string request_data;
+		int bytes_received;
 
-	_request.set_state(0);
-	while (true) {
-		bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
-		std::cout << "bytes_received " << bytes_received << std::endl; 
-		if (bytes_received > 0) {
-			Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
-			request_data.append(buffer, bytes_received);
+		//_request.set_state(0);
+		while (true) {
+			bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
+			std::cout << "bytes_received " << bytes_received << std::endl; 
+			if (bytes_received > 0) {
+				Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
+				request_data.append(buffer, bytes_received);
 
-		} else if (bytes_received == 0 ) {
-			if (!request_data.empty())
-				break;
-			// Cliente desconectado
-			Logger::log(Logger::WARN, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
-			return -1;
+			} else if (bytes_received == 0 ) {
+				if (!request_data.empty())
+					break;
+				// Cliente desconectado
+				Logger::log(Logger::WARN, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
+				return -1;
+			}
+			else {
+				std::cerr << to_string(errno) << " " <<strerror(errno) << std::endl;
+				if (!request_data.empty())
+					break;
+				Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
+				return -1;
+			}
 		}
-		else {
-			std::cerr << to_string(errno) << " " <<strerror(errno) << std::endl;
-			if (!request_data.empty())
-				break;
-			Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
-			return -1;
+		_request.parser(request_data);
+		Location loc;
+		if (!_request.get_path().empty() && _request.get_location().isEmpty()) {
+			_request.set_location(srv_conf.findMatchingLocation(_request.get_path()));
 		}
+		std::string path_tmp;
+	} catch (HttpException &e) {
+		//CLient conoce el error
+		//Logger::ERROR....
 	}
-	_request.parser(request_data);
-	std::string path_tmp;
 	return 0;
 }
 
@@ -171,7 +180,7 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 }
 
 int Client::handle_response(ServerConfig  srv_conf) {
-	std::string path_tmp;
+	std::string script_path;
 	std::string rs;
 	std::string rs_start_line = create_start_line(200, "OK");
 	std::string path = _request.get_path();
@@ -184,22 +193,22 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			throw HttpException::NotAllowedMethodException();
 		else if (!loc.get_redirect_url().empty())
 			throw HttpException::MovedPermanentlyRedirectionException();
-		if (loc.findScriptPath(path, path_tmp)) {
+		if (loc.findScriptPath(path, script_path)) {
 			if (loc.get_auto_index()) {
 				files = loc.get_files();
-				Logger::log(Logger::INFO,"Server.cpp", "Generating index: " + path_tmp);
-				rs = generate_index_html(files, path_tmp);
+				Logger::log(Logger::INFO,"Server.cpp", "Generating index: " + script_path);
+				rs = generate_index_html(files, script_path);
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
 			}
 			throw HttpException::NoContentException();
 		}
-		size_t dot_pos = path_tmp.rfind('.');
+		size_t dot_pos = script_path.rfind('.');
 		if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
 		{
-			if (ends_with(path_tmp, ".html")) {
+			if (ends_with(script_path, ".html")) {
 				if (method != "HEAD")
-					resolve_html_path(path_tmp);
+					resolve_html_path(script_path);
 				else 
 					throw HttpException::NoContentException();
 			} else {
@@ -207,8 +216,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
-				CGI cgi(path, _request);
-				cgi.resolve_cgi_env(_request, path_tmp, http_cookie);
+				CGI cgi(loc.get_root_directory() ,script_path, _request);
+				cgi.resolve_cgi_env(_request, script_path, http_cookie);
 				rs = cgi.execute();
 				update_cookie_from_response(rs, cookie);
 				//RESPONSE
