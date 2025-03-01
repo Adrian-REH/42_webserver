@@ -29,7 +29,7 @@ int HttpServerManager::start() {
 	
 		socket_fd = create_socket_fd(srv.getPort());
 		if (socket_fd < 0) {
-			Logger::log(Logger::WARN,"HttpServerManager.cpp", "Invalid create socket_fd to port: " + to_string(srv.getPort()));
+			Logger::log(Logger::WARN,"HttpServerManager.cpp",  srv.get_server_name()+ ":" + to_string(srv.getPort()) + "failed: Address already in use");
 			continue ;
 		}
 		srv.setSocketFd(socket_fd);

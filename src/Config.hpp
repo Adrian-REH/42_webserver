@@ -26,7 +26,14 @@ class Config {
 	class ConfigNotFoundException : public std::exception {
 		public:
 			const char* what() const throw() {
-				return "Server configuration not found";
+				return "Configuration not found";
+			}
+	};
+
+	class ConfigServerNameExistException : public std::exception {
+		public:
+			const char* what() const throw() {
+				return "The server_name already exists";
 			}
 	};
 };
