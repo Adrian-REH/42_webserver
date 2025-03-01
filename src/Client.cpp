@@ -111,6 +111,9 @@ int Client::handle_request(ServerConfig srv_conf) {
 	} catch (HttpException::RequestTimeoutException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		_error = std::make_pair<int, std::string>(408, "Request Timeout Exception");
+	} catch (HttpException::RequestURITooLongException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		_error = std::make_pair<int, std::string>(414, "Request-URI Too Long");
 	}
 	
 	return 0;
