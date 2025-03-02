@@ -3,7 +3,7 @@
 #include "Config.hpp"
 #include "HttpException.hpp"
 
-Server::Server(int port, size_t max_clients, std::string server_name) : _port(port), _max_clients(max_clients), _server_name(server_name) { //,_max_clients(max_clients), _env_len(0){
+Server::Server(int port, size_t max_clients, std::string server_name) : _port(port), _max_clients(max_clients), _server_name(server_name), _clients() { //,_max_clients(max_clients), _env_len(0){
 }
 
 Server &Server::set_port(const size_t port) {
@@ -133,7 +133,7 @@ int Server::handle_input_client(int client_fd) {
 	}
 
 
-	ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_server_name);
+	ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_port);
 
 	if (client->handle_request(srv_conf) < 0) {
 		return -1;
@@ -147,7 +147,7 @@ int Server::handle_output_client(int client_fd) {
 	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for client_fd: " + to_string(client_fd));
 	try {
 		Config& conf = Config::getInstance();
-		client->handle_response(conf.getServerConfByServerName(_server_name));
+		client->handle_response(conf.getServerConfByServerName(_port));
 	} catch (HttpException::ForbiddenException &e) {
 		client->send_error(403, "Forbidden");
 		std::string val(e.what());

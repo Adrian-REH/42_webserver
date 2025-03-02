@@ -5,12 +5,12 @@
 #include "Logger.hpp"
 #include "Config.hpp"
 
-HttpServerManager::HttpServerManager(): _max_events(0) {}
+HttpServerManager::HttpServerManager(): _sock_srvs(), _srv_sockets(0), _cli_srvs(), _epoll_fd(0),_max_events(0) {}
 
 
 int HttpServerManager::start() {
-	std::map<std::string, ServerConfig>::iterator it;
-	std::map<std::string, ServerConfig>  srvs_conf = Config::getInstance().getServerConfs();
+	std::map<int, ServerConfig>::iterator it;
+	std::map<int, ServerConfig>  srvs_conf = Config::getInstance().getServerConfs();
 	int socket_fd;
 	size_t max_clients_srv = (1024 / srvs_conf.size());
 	struct epoll_event ev;
@@ -25,14 +25,11 @@ int HttpServerManager::start() {
 	}
 
 	for (it = srvs_conf.begin(); it != srvs_conf.end(); it++) {
-		Server srv(it->second.get_port(), max_clients_srv, it->first);
-	
-		socket_fd = create_socket_fd(srv.getPort());
+		socket_fd = create_socket_fd(it->second.get_port());
 		if (socket_fd < 0) {
-			Logger::log(Logger::WARN,"HttpServerManager.cpp",  srv.get_server_name()+ ":" + to_string(srv.getPort()) + " failed: Address already in use");
+			Logger::log(Logger::WARN,"HttpServerManager.cpp",  it->second.get_server_name()+ ":" + to_string(it->second.get_port()) + " failed: Address already in use");
 			continue ;
 		}
-		srv.setSocketFd(socket_fd);
 		ev.events = EPOLLIN;
 		ev.data.fd = socket_fd;
 		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, socket_fd, &ev) == -1) {
@@ -40,10 +37,12 @@ int HttpServerManager::start() {
 			close(socket_fd);
 			continue ;
 		}
-		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Server socket registered: host:port http://localhost:"+ to_string(srv.getPort()) +" socket_fd: " + to_string(socket_fd));
+		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Server socket registered: host:port http://localhost:"+ to_string(it->second.get_port()) +" socket_fd: " + to_string(socket_fd));
 		
-		_sock_srvs[socket_fd] = &(srv);
-		_max_events += srv.getMaxClients();
+		Server *srv = new Server(it->first, max_clients_srv, it->second.get_server_name());
+		srv->setSocketFd(socket_fd);
+		_sock_srvs[socket_fd] = srv;
+		_max_events += srv->getMaxClients();
 	}
 	if (_sock_srvs.empty()) {
 		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Number of server is 0");

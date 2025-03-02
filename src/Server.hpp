@@ -49,7 +49,7 @@ public:
 	
 	void deleteClient(const int client_fd);
 	bool hasClientTimedOut(const int key_client_fd) {
-		ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_server_name);
+		ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_port);
 		std::map<int, Client*>::iterator it = _clients.find(key_client_fd);
 		if (it != _clients.end())
 			return it->second->has_client_timed_out() > srv_conf.get_timeout();

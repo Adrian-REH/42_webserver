@@ -13,15 +13,15 @@
 class Config {
 	private:
 		size_t _max_clients;
-		std::map<std::string, ServerConfig> _srvs_conf;
+		std::map<int, ServerConfig> _srvs_conf;
 		Config();
 		Config(const Config&);
 		Config& operator=(const Config&);
 	public:
 		static Config &getInstance();
 		void addServerConf(ServerConfig);
-		std::map<std::string, ServerConfig> getServerConfs();
-		ServerConfig getServerConfByServerName(const std::string);
+		std::map<int, ServerConfig> getServerConfs();
+		ServerConfig getServerConfByServerName(const int);
 
 	class ConfigNotFoundException : public std::exception {
 		public:
