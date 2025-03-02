@@ -68,9 +68,9 @@ int countOccurrences(const std::string& str, const std::string& sub) {
 	size_t pos = 0;
 
 	// Usamos find para buscar subcadenas
-	while ((pos = str.find(sub, pos)) != std::string::npos) {
-		count++;  // Encontró una coincidencia
-		pos += sub.length();  // Avanza la posición para buscar la siguiente coincidencia
+	if ((pos = str.find(sub, pos)) != std::string::npos) {
+		count += sub.length();  // Encontró una coincidencia
+		//pos += sub.length();  // Avanza la posición para buscar la siguiente coincidencia
 	}
 
 	return count;

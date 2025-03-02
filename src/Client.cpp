@@ -223,7 +223,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		else if (!loc.get_redirect_url().empty())
 			throw HttpException::MovedPermanentlyRedirectionException();
 		if (loc.findScriptPath(path, script_path)) {
-			if (loc.get_auto_index()) {
+			if (loc.get_auto_index()) { //TODO: ? Set a default file to answer if the request is a directory.
 				files = loc.get_files();
 				Logger::log(Logger::INFO,"Client.cpp", "Generating index: " + script_path);
 				rs = generate_index_html(files, script_path);
@@ -231,7 +231,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				send_response(rs_start_line);
 				return 0;
 			}
-			throw HttpException::NotFoundException();
+			throw HttpException::ForbiddenException();
 		}
 
 		size_t dot_pos = script_path.rfind('.');
@@ -239,7 +239,10 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		{
 			if (ends_with(script_path, ".html")) {
 				if (method != "HEAD")
-					resolve_html_path(script_path);
+				{
+					rs_start_line.append(resolve_html_path(script_path));
+					send_response(rs_start_line);
+				}
 				else 
 					throw HttpException::NoContentException();
 			} else {
@@ -247,7 +250,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				std::string tmp = script_path;
 				if (tmp[0] == '/')
 					tmp.erase(0, 1);
-				if (access(tmp.c_str(), R_OK | X_OK) == -1)
+				if (access(tmp.c_str(), R_OK ) == -1)
 					throw HttpException::ForbiddenException();
 				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
@@ -266,6 +269,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
 			}
+			return 0;
 		}
 		return 0;
 	}

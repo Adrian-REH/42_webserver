@@ -1,5 +1,6 @@
 
 #include "Location.hpp"
+#include "Logger.hpp"
 
 Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false), _client_max_body_size(1000000),_path_upload_directory("") {}
 
@@ -117,8 +118,6 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		path = path_tmp;
 		if (!_index.empty() && ends_with(path, _index))
 			return final_path = buildFullPath(_root_directory, "", path), 0;
-
-		//return buildFullPath(_root_directory, path, ""), 0;
 	}
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
@@ -131,17 +130,23 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		dir++;
 
 	// If directory doesn't exist, it will throw an exception
-	_files = get_all_dirs(dir); // TODO: Adjust for directories without leading '/'
-	for (std::vector<std::string>::iterator it = _files.begin(); it != _files.end(); ++it) {
-		if (!file.empty() && ends_with(file, *it)) {
-			return final_path = buildFullPath(dir, "", *it), 0;
-		} 
-		/*else if (*it == _index){
-			return final_path = buildFullPath(dir, "", _index), 0;
-		}*/
+	try {
+		_files = get_all_dirs(dir); 
+		std::vector<std::string>::iterator it;
+		for (it = _files.begin(); it != _files.end(); ++it) {
+			if (!file.empty() && ends_with(file, *it)) {
+				return final_path = buildFullPath(dir, "", *it), 0;
+			}
+		}
+		//No existe file en dir
+		if (it == _files.end() && !file.empty())
+			throw HttpException::NotFoundException();
+	} catch (const std::exception &e){
+		Logger::log(Logger::ERROR,"Location.cpp", e.what());
+		throw HttpException::NotFoundException(); // No existte dir
 	}
-	//No existe o autoindex
-	return (final_path = dir,1);
+	//existe dir y tiene o no autoindex
+	return (final_path = dir, 1);
 }
 /**
  * FIX: autoindex paths on findScriptPath()

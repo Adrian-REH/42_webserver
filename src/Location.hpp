@@ -3,6 +3,7 @@
 
 #include "utils/Utils.hpp"
 #include "LimitExcept.hpp"
+#include "HttpException.hpp"
 
 class Location {
 	private:

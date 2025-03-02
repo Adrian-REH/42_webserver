@@ -23,9 +23,11 @@ void Request::parse_start_line(const std::string& start_line) {
 		throw HttpException::RequestURITooLongException();
 	
 	size_t pos = _path.find('?');
-	if (pos != std::string::npos)
+	if (pos != std::string::npos) {
 		_query_string = _path.substr(pos + 1);
-
+		_path = _path.substr(0, pos);
+	}
+	
 	_protocol = parts[2];
 	if (_protocol != PROTOCOL)
 		throw HttpException::HTTPVersionNotSupportedException();
@@ -95,7 +97,7 @@ void Request::receiving_headers()
 	std::string headers_section = _raw_req.substr(_raw_req.find("\r\n") + 2, header_end - _raw_req.find("\r\n") - 2);
 	parse_start_line(start_line);
 	parse_headers(headers_section);
-
+	//Logger::log(Logger::DEBUG, "Request.cpp", "_path: " + _path);
 	Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: RECEIVING_BODY");
 	receiving_body(_raw_req.substr(header_end + 4));
 }
