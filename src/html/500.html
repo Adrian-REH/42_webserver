@@ -1,7 +1,95 @@
 <!DOCTYPE html>
-<html>
-<head><title>500 Server Error</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>500 Server Error</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #333;
+    }
+    
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 3rem;
+      text-align: center;
+      max-width: 90%;
+      width: 500px;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #4a6fa5;
+      font-weight: 600;
+    }
+    
+    p {
+      font-size: 1.1rem;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    
+    .status-code {
+      display: inline-block;
+      background-color: #eef2f7;
+      color: #4a6fa5;
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      color: #4a6fa5;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        padding: 2rem;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
 <body>
-<h1>500 Server Error</h1>
+  <div class="container">
+    <div class="icon">⚠️</div>
+    <div class="status-code">HTTP 500</div>
+    <h1>Server Error</h1>
+	<p>Oops! Something went wrong on the server. This is a generic error that indicates an issue processing the request. Please try again later, or contact the server administrator if the problem persists.</p>
+</div>
 </body>
 </html>
