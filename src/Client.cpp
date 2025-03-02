@@ -199,6 +199,9 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
     }
 }
 
+
+
+
 int Client::handle_response(ServerConfig  srv_conf) {
 	std::string script_path;
 	std::string rs;
@@ -223,7 +226,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		else if (!loc.get_redirect_url().empty())
 			throw HttpException::MovedPermanentlyRedirectionException();
 		if (loc.findScriptPath(path, script_path)) {
-			if (loc.get_auto_index()) { //TODO: ? Set a default file to answer if the request is a directory.
+			if (loc.get_auto_index()) { //TODO: ? Set a default file to answer if the request is a directory. EL DEfault directory siempre es donde esta ubicado Nginx
 				files = loc.get_files();
 				Logger::log(Logger::INFO,"Client.cpp", "Generating index: " + script_path);
 				rs = generate_index_html(files, script_path);
@@ -234,6 +237,20 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			throw HttpException::ForbiddenException();
 		}
 
+		if (loc.get_auto_index()) {
+			//TODO en caso de  ser un file sin extencion como hago para que se descargue?
+			//TODO: Agregar timeout
+			std::cout << script_path << std::endl;
+			if (script_path[0] == '/')
+				script_path.erase(0, 1);
+			rs_start_line.append("Content-Type: application/octet-stream\r\n");
+			size_t dot_pos = script_path.rfind('/');
+			rs_start_line.append("Content-Disposition: attachment; filename=\"" + script_path.substr(dot_pos) + "\"\r\n");
+			rs = readFileNameToStr(script_path.c_str());
+			rs_start_line.append(rs);
+			send_response(rs_start_line);
+			return 0;
+		}
 		size_t dot_pos = script_path.rfind('.');
 		if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1))
 		{
@@ -271,7 +288,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			}
 			return 0;
 		}
-		return 0;
+		throw HttpException::NotFoundException();
 	}
 	catch(HttpException::NotAllowedMethodException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
