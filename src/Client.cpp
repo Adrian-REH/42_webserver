@@ -127,9 +127,13 @@ std::string resolve_html_path(std::string path) {
 
 	Logger::log(Logger::INFO,"Client.cpp", "resolve_html_path: " + path);
 	rs = "Content-Type: text/html\r\n\r\n";
+	if (access(path.c_str(), F_OK) < 0)
+		throw HttpException::NotFoundException();
+	if (access(path.c_str(), R_OK) < 0)
+		throw HttpException::ForbiddenException();
 	std::ifstream	inFile(path.c_str());
 	if (!inFile)
-		throw HttpException::ForbiddenException();
+		throw HttpException::InternalServerErrorException();
 	std::string line;
 	while (std::getline(inFile, line))
 		rs += line + "\n";
@@ -243,7 +247,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				std::string tmp = script_path;
 				if (tmp[0] == '/')
 					tmp.erase(0, 1);
-				if (access(tmp.c_str(), R_OK) == -1)
+				if (access(tmp.c_str(), R_OK | X_OK) == -1)
 					throw HttpException::ForbiddenException();
 				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
