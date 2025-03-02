@@ -111,18 +111,17 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 	if (!_index.empty() && ends_with(path, _index))
 		return final_path = buildFullPath(_root_directory, "", path), 0;
 	// Check for a matching file in _files.
-	size_t dot_pos = path.rfind('.');
-	if ((dot_pos != std::string::npos) && (dot_pos != path.length() - 1)) {
-		std::string path_tmp  = extractStrStart(path, "/");
-		file = extractStrEnd(path, path_tmp); //extractStrEnd
-		path = path_tmp;
-		if (!_index.empty() && ends_with(path, _index))
-			return final_path = buildFullPath(_root_directory, "", path), 0;
-	}
+	std::string path_tmp  = extractStrStart(path, "/");
+	file = extractStrEnd(path, path_tmp); //extractStrEnd
+	if (file[0] == '/')
+		file.erase(0, 1);
+	path = path_tmp;
+	if (!_index.empty() && ends_with(path, _index))
+		return final_path = buildFullPath(_root_directory, "", path), 0;
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
 
-	std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"'"<< std::endl;
+	std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"' file: "<< file << std::endl;
 	if (work_dir == "/")
 		work_dir = ".";
 	const char * dir = work_dir.c_str();
@@ -134,11 +133,12 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		_files = get_all_dirs(dir); 
 		std::vector<std::string>::iterator it;
 		for (it = _files.begin(); it != _files.end(); ++it) {
-			if (!file.empty() && ends_with(file, *it)) {
-				return final_path = buildFullPath(dir, "", *it), 0;
+				std::cout << *it << std::endl;
+			if (!file.empty() && ends_with(*it, file)) {
+				return final_path = buildFullPath(dir, "", file), 0;
 			}
 		}
-		//No existe file en dir
+		std::cout << "sss"<< std::endl;
 		if (it == _files.end() && !file.empty())
 			throw HttpException::NotFoundException();
 	} catch (const std::exception &e){
