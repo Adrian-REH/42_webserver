@@ -43,6 +43,9 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	_env = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); ++i) {
 		_env[i] = (char*)env_strings[i].c_str();
+		char * s_cstr = new char[env_strings[i].size() + 1];
+		std::strcpy(s_cstr, env_strings[i].c_str());
+		_env[i] = s_cstr;
 	}
 	_env[env_strings.size()] = NULL;  // El último elemento debe ser NULL
 	
