@@ -30,7 +30,6 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	env_strings.push_back("REQUEST_METHOD=" + req.get_method());
 	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
 	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("Content-Length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
-	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
 	env_strings.push_back("SCRIPT_NAME=" + _script_path);
 	env_strings.push_back("CONTENT_TYPE=" + req.get_header_by_key("Content-Type"));
 	env_strings.push_back("SERVER_NAME=" + req.get_header_by_key("Host"));
