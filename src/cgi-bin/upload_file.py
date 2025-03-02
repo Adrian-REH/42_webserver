@@ -57,7 +57,6 @@ def main():
 		path_f = os.path.join(dir_path, "files", filename)
 		try:
 			f = open(path_f, 'wb', 10000)
-			f.encoding()
 		except IOError as exc:
 			""" tb = sys.exc_info()[-1]
 			lineno = tb.tb_lineno
