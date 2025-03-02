@@ -20,7 +20,7 @@ std::string generate_index_html(std::vector<std::string> files, std::string dir_
             continue;
         }
         // Escribir cada archivo/directorio en la lista HTML
-        index_file.append( "<li><a href=\"");
+        index_file.append( "<li><a href=\"/"+dir_path+"");
 		index_file.append(entry_path);
 		index_file.append("\">");
 
