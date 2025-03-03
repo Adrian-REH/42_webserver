@@ -124,8 +124,8 @@ std::string CGI::execute() {
 		} else if (nfds < 0)
 			throw HttpException::InternalServerErrorException();
 		//Obtengo el estado del pid
-		waitpid(pid, &status, -1);
-		int ret;
+		waitpid(pid, &status, 0);
+		int ret = 0;
 		if (WIFEXITED(status)){
 			ret = WEXITSTATUS(status);
 			Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
