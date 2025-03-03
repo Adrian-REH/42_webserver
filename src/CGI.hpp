@@ -22,6 +22,7 @@ class CGI {
 		Request _request;
 		char** _env;
 		size_t _exec_timeout;
+		std::string _interpreter;
 
 	public:
 		/**

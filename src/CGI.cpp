@@ -4,7 +4,9 @@
 
 
 CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
-	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout) {}
+	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout), _interpreter(determine_interpreter()) {
+		determine_interpreter();
+	}
 
 /**
  * @brief Determina el intérprete adecuado para el script según su extensión.
@@ -20,7 +22,7 @@ std::string CGI::determine_interpreter() const {
 	} else if (ends_with(_script_path, ".js")) {
 		return "/usr/bin/node";
 	} else {
-		throw std::runtime_error("Unsupported script type: " + _script_path);
+		throw HttpException::UnsupportedMediaTypeException("Unsupported script type: " + _script_path);
 	}
 }
 
@@ -82,9 +84,8 @@ std::string CGI::execute() {
 				exit(errno);// failure exit from CHILD PROCESS
 			}
 
-			std::string interpreter = determine_interpreter();
 			char* argv[] = {
-				(char*)interpreter.c_str(),
+				(char*)_interpreter.c_str(),
 				(char*)_script_path.c_str() , // Quito el primer caracter '/'
 				NULL
 			};
@@ -95,7 +96,7 @@ std::string CGI::execute() {
 			close(cgi_response[1]);
 			if (dup2(cgi_io[0], STDIN_FILENO) < 0)
 				(close(cgi_io[0]), exit(errno));
-			execve(interpreter.c_str(), argv, _env);
+			execve(_interpreter.c_str(), argv, _env);
 			exit(errno);
 		} catch (const std::exception&  ) {
 			exit(errno);
