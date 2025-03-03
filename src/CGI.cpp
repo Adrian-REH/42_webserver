@@ -64,9 +64,12 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
  */
 std::string CGI::execute() {
 	int status;
-	int io[2];
-
-	if (pipe(io) < 0)
+	int cgi_io[2];
+	int cgi_response[2];
+	Logger::log(Logger::DEBUG, "CGI.cpp", "Executing CGI...");
+	if (pipe(cgi_io) < 0)
+		throw HttpException::InternalServerErrorException();
+	if (pipe(cgi_response) < 0)
 		throw HttpException::InternalServerErrorException();
 
 	pid_t pid = fork();
@@ -85,51 +88,65 @@ std::string CGI::execute() {
 				(char*)_script_path.c_str() , // Quito el primer caracter '/'
 				NULL
 			};
-			dup2(io[1], STDOUT_FILENO);
-			dup2(io[1], STDERR_FILENO);
-			close(io[1]);
-			dup2(io[0], STDIN_FILENO);
-			close(io[0]);
-
+			close(cgi_response[0]);
+			close(cgi_io[1]);
+			if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
+				(close(cgi_io[0]), exit(errno));
+			close(cgi_response[1]);
+			if (dup2(cgi_io[0], STDIN_FILENO) < 0)
+				(close(cgi_io[0]), exit(errno));
 			execve(interpreter.c_str(), argv, _env);
-			exit(4);
+			exit(errno);
 		} catch (const std::exception&  ) {
-			exit(2);
+			exit(errno);
 		}
 	} else {
-		
-		write(io[1], _request.get_body().c_str(), _request.get_body().size());
-		close(io[1]);
+		write(cgi_io[1], _request.get_body().c_str(), _request.get_body().size());
+		close(cgi_io[1]);
+		close(cgi_response[1]);
 		fd_set set;
 		struct timeval timeout;
 		timeout.tv_sec = _exec_timeout;
 		timeout.tv_usec = 0;
 		FD_ZERO(&set);
-		FD_SET(io[0], &set);
+		FD_SET(cgi_response[0], &set);
 
 		/**
 		 * Escucho el estado del fd io[0] +1, en caso de que cambie su estado(alguienn escriba sobre el) antes de timeout entonces result = numero de fds escritos
 		 * Si en caso de que no se escriba sobre el hasta o luego de llegar a timeout, select devolvera 0fds escritos y ejecutare un error
 		 */
-		int nfds = select(io[0] + 1, &set, NULL , NULL, &timeout);
+		Logger::log(Logger::DEBUG,"CGI.cpp","Service waiting to pid: " + to_string(pid));
+		int nfds = select(cgi_response[0] + 1, &set, NULL , NULL, &timeout);
+		Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(pid) + " response nfds: " + to_string(nfds));
 		if (nfds == 0) {
 			kill(pid, SIGKILL);
 			throw HttpException::RequestTimeoutException("Timeout CGI execution");
 		} else if (nfds < 0)
 			throw HttpException::InternalServerErrorException();
 		//Obtengo el estado del pid
-		waitpid(pid, &status, 0);
+		waitpid(pid, &status, -1);
 		int ret;
 		if (WIFEXITED(status)){
 			ret = WEXITSTATUS(status);
-			//Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
+			Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
 		}
 		if (WIFSIGNALED(status)){
 			ret = WTERMSIG(status);
-			//Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
+			Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
 		}
-		std::string result = readFd(io[0]);
-		close(io[0]);
+
+		std::string result;
+		size_t  expired = _exec_timeout + std::time(0);
+		char buffer[1024];
+		ssize_t bytes_read;
+	
+		while ((bytes_read = read(cgi_response[0], buffer, sizeof(buffer))) > 0) {
+			result.append(buffer, bytes_read);
+			std::time_t currentTime = std::time(0);
+			if (difftime(currentTime, expired) > 0)
+				throw HttpException::RequestTimeoutException();
+		}
+		close(cgi_response[0]);
 		if (ret) {
 			std::string error(strerror(ret));
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
