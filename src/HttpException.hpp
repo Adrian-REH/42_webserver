@@ -81,7 +81,16 @@ class HttpException  {
 				return "414 Request-URI Too Long";
 			}
 	};
-
+	class UnsupportedMediaTypeException : public std::exception {
+		private:
+			std::string _message;
+		public:
+			UnsupportedMediaTypeException(std::string message = ""): _message("415 Unsupported Media Type : " + message) {}
+			virtual ~UnsupportedMediaTypeException() throw() {}
+			virtual const char* what() const throw() {
+				return (_message).c_str();
+			}
+	};
 	class InternalServerErrorException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
