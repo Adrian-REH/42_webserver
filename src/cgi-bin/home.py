@@ -110,10 +110,20 @@ def home():
             p {
                 display: inline-block;
             }
+            .signout-button {
+                position: absolute;
+                top: 10px; /* Ajusta la distancia desde la parte superior */
+                right: 10px; /* Mueve el botón a la derecha */
+                padding: 10px 15px;
+                background-color: red;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+            }
         </style>
     </head>
     <body>
-        <a href="signout.py">Sign Out</a>
+        <a href="signout.py" class="signout-button">Sign Out</a>
         <div class="container">
             <h1>Upload a file </h1>
             

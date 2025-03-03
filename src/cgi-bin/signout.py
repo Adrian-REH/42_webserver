@@ -72,7 +72,7 @@ def main():
 		<body>
 			<div class="container">
 				<div class="message">Sesión Finalizada</div>
-				<a class="button" href="/cgi-bin/" >Volver al Inicio</a>
+				<a class="button" href="/cgi-bin/login.py" >Volver a login</a>
 			</div>
 		</body>
 		</html>""")

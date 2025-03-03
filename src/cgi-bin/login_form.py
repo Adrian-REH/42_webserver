@@ -33,7 +33,7 @@ def loginForm():
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Formulario CGI en Python</title>
+		<title>Login Form</title>
 		<style>
 			body {{
 				font-family: 'Arial', sans-serif;
@@ -115,7 +115,7 @@ def loginForm():
 	</head>
 	<body>
 		<div class="container">
-			<h1>Formulario CGI en Python</h1>
+			<h1>Login Form</h1>
 			<form method="post" action="/cgi-bin/login.py">
 				<label for="username">Username:</label>
 				<input type="text" id="username" name="username" value="{username}">
