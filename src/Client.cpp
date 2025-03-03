@@ -240,11 +240,11 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			}
 			throw HttpException::ForbiddenException();
 		}
-
 		if (loc.get_auto_index()) {
 			//TODO en caso de  ser un file sin extencion como hago para que se descargue?
 			//TODO: Agregar timeout
 			std::cout << script_path << std::endl;
+			
 			if (script_path[0] == '/')
 				script_path.erase(0, 1);
 			rs_start_line.append("Content-Type: application/octet-stream\r\n");
@@ -292,6 +292,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			}
 			return 0;
 		}
+		
 		throw HttpException::NotFoundException();
 	}
 	catch(HttpException::NotAllowedMethodException &e) {
@@ -330,6 +331,12 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(408, "Request Timeout");
 		std::string path_error = srv_conf.get_error_page_by_code(408);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::UnsupportedMediaTypeException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(415, "Unsupported Media Type");
+		std::string path_error = srv_conf.get_error_page_by_code(415);
 		rs = resolve_html_path(path_error);
 	}
 	rs_start_line.append(rs);
