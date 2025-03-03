@@ -189,17 +189,24 @@ std::string Client::prepare_cgi_data(const ServerConfig& srv_conf, Cookie cookie
 }
 
 void Client::update_cookie_from_response(const std::string& response, Cookie& cookie) {
-    SessionCookieManager& sessionCM = SessionCookieManager::getInstance();
-
-    if (response.find("Set-Cookie: session_id=") != std::string::npos) {
-        std::size_t pos_session_id = response.find("session_id=");
-        if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
-            std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
+	SessionCookieManager& sessionCM = SessionCookieManager::getInstance();
+	std::size_t pos_session_id  = response.find("Set-Cookie: session_id=");
+	std::size_t pos_session  = response.find("session=valid");
+	
+	if (pos_session_id != std::string::npos) {
+		if (!cookie.isEmpty() && pos_session == std::string::npos) {
+			sessionCM.deleteCookieBySessionId(cookie.value);
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie deleted value:" + cookie.value);
+			return ;
+		}
+		if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
+			std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
+			std::cout << to_string(pos_session == std::string::npos) << " " << std::endl;
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie session_id Saving... value:" + session_id);
-            cookie = sessionCM.setCookieBySessionId(session_id, 300);
+			cookie = sessionCM.setCookieBySessionId(session_id, 300);
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie Saved value:" + cookie.value);
-        }
-    }
+		}
+	}
 }
 
 

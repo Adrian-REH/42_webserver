@@ -105,6 +105,7 @@ def success():
 		</style>
 	</head>
 	<body>
+		<button onclick="logout()">Salir de la sesión</button>
 		<div class="container">
 			<h1>Página de Inicio</h1>
 			<div class="message {mensaje_class}">
@@ -118,9 +119,10 @@ def success():
 
 def main():
 	form = cgi.FieldStorage()
-	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin'):
-		success()
-	elif verify_session():
+	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin') or verify_session():
+		session_id = fetch_srv_session_id()
+		print(f"Set-Cookie: session=valid;")
+		print(f"Set-Cookie: session_id={session_id};")
 		home()
 	else:
 		loginForm()

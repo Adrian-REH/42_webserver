@@ -43,7 +43,8 @@ Cookie SessionCookieManager::getCookieBySessionId(const std::string& session_id)
 }
 
 void SessionCookieManager::deleteCookieBySessionId(const std::string& session_id) {
-	_cookies.erase(session_id);
+	if (_cookies.find(session_id) != _cookies.end())
+		_cookies.erase(session_id);
 }
 
 bool SessionCookieManager::isCookieExpired(const Cookie& cookie) {

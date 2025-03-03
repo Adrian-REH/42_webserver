@@ -113,7 +113,7 @@ def home():
         </style>
     </head>
     <body>
-
+        <a href="signout.py">Sign Out</a>
         <div class="container">
             <h1>Upload a file </h1>
             
