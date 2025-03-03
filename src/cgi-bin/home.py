@@ -5,6 +5,20 @@ import http.cookies
 import os
 from auth import verify_session
 
+def list_files():
+    real = os.path.abspath(__file__)
+    dir_path = os.path.dirname(real)
+    
+    path_f = os.path.join(dir_path, "files")
+    file_names = [f for f in os.listdir(path_f) if os.path.isfile(os.path.join(path_f, f))]
+    for filename in file_names:
+        print(f"""
+            <li>
+                {filename}
+                <button onclick="deleteFile('{filename}')">Delete</button>
+            </li>
+        """)
+
 def home():
     mensaje = "INFO"
     mensaje_class = "info"
@@ -120,6 +134,49 @@ def home():
                 text-decoration: none;
                 border-radius: 5px;
             }
+                /* Estilos para el contenedor de los archivos subidos */
+    .uploaded-files-card {
+        border: 1px solid #ddd;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        background-color: #f9f9f9;
+    }
+
+    .uploaded-files-card h2 {
+        margin-bottom: 15px;
+    }
+
+    .uploaded-files-card ul {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .uploaded-files-card ul li {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Estilos para el botón de borrar */
+    .uploaded-files-card ul li button {
+        background-color: red;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+    .uploaded-files-card ul li button:hover {
+        background-color: darkred;
+    }
         </style>
     </head>
     <body>
@@ -139,10 +196,46 @@ def home():
                 <input type="submit" value="Upload">
             </form>
             <hr>
+            
+            <div class="uploaded-files-card">
+                <h2>Uploaded Files</h2>
+                <ul id="fileList">""")
+    list_files()
+    print("""
+                </ul>
+            </div>
         </div>
         
     </body>
     <script>
+        function deleteFile(fileName) {
+            fetch('http://localhost:8080/cgi-bin/delete_file.py', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fileId: fileName,
+                }),
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Archivo eliminado con éxito');
+                    const fileList = document.getElementById('fileList');
+                    const listItems = fileList.getElementsByTagName('li');
+                    for (let i = 0; i < listItems.length; i++) {
+                        if (listItems[i].textContent.includes(fileName)) {
+                            listItems[i].remove(); // Eliminar el <li> correspondiente
+                        }
+                    }
+                } else {
+                    alert('Error al eliminar el archivo');
+                }
+            })
+            .catch(error => {
+                alert('Error en la solicitud: ' + error);
+            });
+        }
         document.getElementById('myFile').addEventListener('change', function() {
             const fileName = this.files[0] ? this.files[0].name : 'No file selected';
             document.getElementById('fileNameDisplay').textContent = fileName;
