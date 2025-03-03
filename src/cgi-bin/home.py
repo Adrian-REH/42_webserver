@@ -16,7 +16,7 @@ def home():
         mensaje_class = "error"
     
     print("Content-type: text/html\n")
-    print(f"""
+    print("""
     <!DOCTYPE html>
     <html lang="es">
     <head>
@@ -24,7 +24,7 @@ def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Página de Inicio</title>
         <style>
-            body {{
+            body {
                 font-family: 'Arial', sans-serif;
                 background-color: #f4f4f9;
                 margin: 0;
@@ -33,55 +33,111 @@ def home():
                 justify-content: center;
                 align-items: center;
                 height: 100vh;
-            }}
+            }
 
-            .container {{
+            .container {
                 background-color: #ffffff;
                 border-radius: 8px;
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                padding: 40px;
+                padding: 30px;
                 width: 100%;
-                max-width: 600px;
+                max-width: 400px;
+            }
+
+            h1 {
                 text-align: center;
-            }}
-
-            h1 {{
                 color: #333333;
-                font-size: 2rem;
-            }}
+            }
 
-            .message {{
-                font-size: 1.2rem;
-                padding: 20px;
+            label {
+                font-size: 1rem;
+                margin-bottom: 10px;
+                display: inline-block;
+                color: #555555;
+            }
+
+
+
+            input[type="submit"] {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                padding: 10px 20px;
                 border-radius: 4px;
+                font-size: 1rem;
+                cursor: pointer;
+                width: 100%;
+            }
+
+            input[type="submit"]:hover {
+                background-color: #0056b3;
+            }
+
+            .message {
+                text-align: center;
+                font-size: 1.2rem;
+                color: #333333;
                 margin-top: 20px;
-            }}
+            }
 
-            .message.success {{
-                background-color: #28a745;
-                color: white;
-            }}
+            .message.error {
+                color: #dc3545;
+            }
 
-            .message.error {{
-                background-color: #dc3545;
+            .message.success {
+                color: #28a745;
+            }
+            #myFile {
+                display: none;
+            }
+            .custom-file-button {
+                background-color: #3d9fd4;
                 color: white;
-            }}
-
-            .message.info {{
-                background-color: #007bff;
-                color: white;
-            }}
+                padding: 10px 20px;
+                border: none;
+                cursor: pointer;
+                border-radius: 5px;
+                font-size: 16px;
+                display: inline-block;
+            }
+            .custom-file-button:hover {
+                background-color: #1d7caf;
+            }
+            #fileNameDisplay {
+                display: inline-block;
+                margin-left: 10px;
+            }
+            p {
+                display: inline-block;
+            }
         </style>
     </head>
     <body>
+
         <div class="container">
-            <h1>Página de Inicio</h1>
-            <div class="message {mensaje_class}">
-                {mensaje}
-            </div>
+            <h1>Upload a file </h1>
             
+            <form enctype="multipart/form-data" action="/cgi-bin/upload_file.py" method = "post" >
+                <input type="file" id="myFile" name="file">
+                <p>
+                    <button type="button" class="custom-file-button" onclick="document.getElementById('myFile').click();">
+                        Select File
+                    </button>
+
+                    <div id="fileNameDisplay">No file selected</div>
+                </p>
+                <input type="submit" value="Upload">
+            </form>
+            <hr>
         </div>
+        
     </body>
+    <script>
+        document.getElementById('myFile').addEventListener('change', function() {
+            const fileName = this.files[0] ? this.files[0].name : 'No file selected';
+            document.getElementById('fileNameDisplay').textContent = fileName;
+        });
+    </script>
     </html>
     """)
 
