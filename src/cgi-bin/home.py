@@ -71,7 +71,7 @@ def home():
                 background-color: #007bff;
                 color: white;
             }}
-        </style>
+            
     </head>
     <body>
         <div class="container">
@@ -81,8 +81,8 @@ def home():
             </div>
         </div>
     </body>
-    </html>
-    """)
+    </html>""")
+
 
 
 

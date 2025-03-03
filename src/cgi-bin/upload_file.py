@@ -14,6 +14,8 @@ def fbuffer(f, chunk_size=10000):
 		yield chunk
 
 def handle_request_file(fileitem):
+	# strip leading path from file name
+	# to avoid directory traversal attacks
 	filename = os.path.basename(fileitem.filename)
 	print(f"<b> {filename}</b>")
 	
@@ -51,7 +53,27 @@ def main():
 	
 	# Test if the file was uploaded
 	if fileitem.filename:
-		handle_request_file(fileitem)
+		# strip leading path from file name
+		# to avoid directory traversal attacks
+		filename = os.path.basename(fileitem.filename)
+		print(f"<b> {filename}</b>")
+		
+		real = os.path.abspath(__file__)
+		dir_path = os.path.dirname(real)
+		
+		path_f = os.path.join(dir_path, "files", filename)
+		try:
+			f = open(path_f, 'wb', 10000)
+		except IOError as exc:
+			""" tb = sys.exc_info()[-1]
+			lineno = tb.tb_lineno
+			filename = tb.tb_frame.f_code.co_filename """
+			print('<b>{} <b>.'.format(exc.strerror))
+			sys.exit(exc.errno)
+		for chunk in fbuffer(fileitem.file):
+			f.write(chunk)
+		f.close()
+		message = 'The file "' + filename + '" was uploaded successfully'
 	else:
 		message = 'No file was uploaded'
 	print(f"""
@@ -60,12 +82,55 @@ def main():
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+		.button {{
+			background-color: #007BFF;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 4px;
+			font-size: 1rem;
+			cursor: pointer;
+			text-decoration: none;
+		}}
+		.button:hover {{
+			background-color: #0056b3;
+		}}
+		</style>
 		</head>
 		<body>
 			<p>{message}</p>
+			<a href="#" id="deleteButton" class="button">Delete {filename}</a>
+			<script>
+				document.getElementById('deleteButton').addEventListener('click', function(event) {{
+					event.preventDefault();  // Evita que el enlace navegue a la URL
+
+					// Realiza una solicitud DELETE al servidor
+					fetch('http://localhost:8080/cgi-bin/delete_file.py', {{
+						method: 'DELETE',
+						headers: {{
+							'Content-Type': 'application/json',
+						}},
+						body: JSON.stringify({{
+							fileId: '{filename}',
+						}}),
+					}})
+					.then(response => {{
+						if (response.ok) {{
+							alert('Archivo eliminado con éxito');
+						}} else {{
+							alert('Error al eliminar el archivo');
+						}}
+					}})
+					.catch(error => {{
+						alert('Error en la solicitud: ' + error);
+					}});
+				}});
+			</script>
 		</body>
 	</html>
 	""")
+
 
 
 if __name__ == "__main__":

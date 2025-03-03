@@ -118,8 +118,6 @@ def success():
 
 def main():
 	form = cgi.FieldStorage()
-	print(form.getvalue('username'))
-	print(form.getvalue('password'))
 	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin'):
 		success()
 	elif verify_session():
