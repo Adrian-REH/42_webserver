@@ -158,7 +158,12 @@ std::string CGI::execute() {
 		if (ret) {
 			std::string error(strerror(ret));
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
-			//throw HttpException::InternalServerErrorException();
+			switch (ret)
+			{
+				case 1: throw HttpException::ForbiddenException();
+				case 2: throw HttpException::NotFoundException();
+				default: throw HttpException::InternalServerErrorException();
+			}
 		}
 		return (result);
 	}

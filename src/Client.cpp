@@ -215,7 +215,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	std::string method = _request.get_method();
 	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
 
-	if (has_error()){
+	if (has_error()) {
 		rs_start_line = create_start_line(_error.first, _error.second);
 		std::string path_error = srv_conf.get_error_page_by_code(204);
 		rs = resolve_html_path(path_error);
@@ -224,6 +224,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		return 0;
 	}
 	try {
+		std::cout << _request.get_method() << std::endl;
 		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
 			throw HttpException::NotAllowedMethodException();
 		else if (!loc.get_redirect_url().empty())
