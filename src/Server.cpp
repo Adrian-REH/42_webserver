@@ -163,6 +163,11 @@ int Server::handle_output_client(int client_fd) {
 		std::string val(e.what());
 		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
 		return -1;
+	} catch (std::exception &e) {
+		client->send_error(500, "Internal Server Error");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
 	}
 	return 0;
 }

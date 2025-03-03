@@ -120,8 +120,7 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		return final_path = buildFullPath(_root_directory, "", path), 0;
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
-
-	std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"' file: "<< file << std::endl;
+	Logger::log(Logger::DEBUG, "Location.cpp", "Work dir, get files: '" + work_dir +"' file: "+ file);
 	if (work_dir == "/")
 		work_dir = ".";
 	const char * dir = work_dir.c_str();
@@ -133,7 +132,7 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		_files = get_all_dirs(dir); 
 		std::vector<std::string>::iterator it;
 		for (it = _files.begin(); it != _files.end(); ++it) {
-				std::cout << *it << std::endl;
+				//std::cout << *it << std::endl;
 			if (!file.empty() && ends_with(*it, file)) {
 				return final_path = buildFullPath(dir, "", file), 0;
 			}

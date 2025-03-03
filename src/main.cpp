@@ -19,7 +19,7 @@ int main(int argc, char **argv, char **env) {
 	sa.sa_flags = (sigemptyset(&sa.sa_mask), 0);
 	(sigaction(SIGINT, &sa, NULL), sigaction(SIGQUIT, &sa, NULL));
 	sigaction(SIGKILL, &sa, NULL);
-	
+	sigaction(SIGPIPE, &sa, NULL);
 	if (argc != 2)
 		return 1;
 	try

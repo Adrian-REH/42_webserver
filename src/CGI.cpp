@@ -101,7 +101,16 @@ std::string CGI::execute() {
 			exit(errno);
 		}
 	} else {
-		write(cgi_io[1], _request.get_body().c_str(), _request.get_body().size());
+		close(cgi_io[0]);
+		Logger::log(Logger::DEBUG,"CGI.cpp","Body Writing.. size:" + to_string(_request.get_body().size()));
+		size_t chunk_size = 8192;
+		size_t written = 0;
+		while (written < _request.get_body().size()) {
+			size_t to_write = std::min(chunk_size, _request.get_body().size() - written);
+			ssize_t bytes_written = write(cgi_io[1], _request.get_body().c_str() + written, to_write);
+			if (bytes_written <= 0) break;
+			written += bytes_written;
+		}
 		close(cgi_io[1]);
 		close(cgi_response[1]);
 		fd_set set;
@@ -110,7 +119,6 @@ std::string CGI::execute() {
 		timeout.tv_usec = 0;
 		FD_ZERO(&set);
 		FD_SET(cgi_response[0], &set);
-
 		/**
 		 * Escucho el estado del fd io[0] +1, en caso de que cambie su estado(alguienn escriba sobre el) antes de timeout entonces result = numero de fds escritos
 		 * Si en caso de que no se escriba sobre el hasta o luego de llegar a timeout, select devolvera 0fds escritos y ejecutare un error
@@ -150,7 +158,7 @@ std::string CGI::execute() {
 		if (ret) {
 			std::string error(strerror(ret));
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
-			throw HttpException::InternalServerErrorException();
+			//throw HttpException::InternalServerErrorException();
 		}
 		return (result);
 	}

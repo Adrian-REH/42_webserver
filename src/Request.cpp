@@ -113,7 +113,7 @@ void Request::   receiving_body(std::string body_section) {
 		return ;
 	}
 
-	std::cout << "_body '" << _body << "'" << std::endl;
+	//std::cout << "_body '" << _body << "'" << std::endl;
 	if (_body.empty())
 		return ;
 	
