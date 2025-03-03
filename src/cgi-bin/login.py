@@ -1,8 +1,10 @@
 # login.py
 import cgi
 import http.cookies
-from login_form import loginForm  # Importa la función loginForm
+from login_form import loginForm
 import os
+from auth import verify_session
+from home import home
 
 def fetch_srv_session_id():
 	try:
@@ -18,7 +20,6 @@ def fetch_srv_session_id():
 		print(f"Error procesando cookies: {e}")
 		return False
 
-# TODO: Hacer funcionar home() y verify_session() y conectarlo con e
 def success():
 	mensaje = "¡Bienvenido, usuario logueado!"
 	mensaje_class = "success"
@@ -119,8 +120,10 @@ def main():
 	form = cgi.FieldStorage()
 	print(form.getvalue('username'))
 	print(form.getvalue('password'))
-	if form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin':
+	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin'):
 		success()
+	elif verify_session():
+		home()
 	else:
 		loginForm()
 

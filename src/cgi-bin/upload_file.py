@@ -4,20 +4,7 @@ import cgitb
 import http.cookies
 import io
 import sys
-
-def verify_session():
-	try:
-		cookie_header = os.environ.get('HTTP_COOKIE', '')
-		if not cookie_header:
-			return False
-		cookie = http.cookies.SimpleCookie(cookie_header)
-		if 'session_id' in cookie:
-			session_id = cookie['session_id'].value
-			return session_id if session_id else False
-		return False
-	except Exception as e:
-		print(f"Error procesando cookies: {e}")
-		return False
+from auth import verify_session
 
 # Generator to buffer file chunks
 def fbuffer(f, chunk_size=10000):
@@ -26,16 +13,36 @@ def fbuffer(f, chunk_size=10000):
 		if not chunk: break
 		yield chunk
 
+def handle_request_file(fileitem):
+	filename = os.path.basename(fileitem.filename)
+	print(f"<b> {filename}</b>")
+	
+	real = os.path.abspath(__file__)
+	dir_path = os.path.dirname(real)
+	
+
+	path_f = os.path.join(dir_path, "files", filename)
+	try:
+		f = open(path_f, 'wb', 10000)
+	except IOError as exc:
+		""" tb = sys.exc_info()[-1]
+		lineno = tb.tb_lineno
+		filename = tb.tb_frame.f_code.co_filename """
+		print('<b>{} <b>.'.format(exc.strerror))
+		sys.exit(exc.errno)
+	for chunk in fbuffer(fileitem.file):
+		f.write(chunk)
+	f.close()
+	message = 'The file "' + filename + '" was uploaded successfully'
+
 def main():
-	'''
 	session_id = verify_session()
 	if not session_id:
 		print(f"Set-Cookie: session_id={session_id}")
 		print("Content-Type: text/html\r\n")
-		print("<h1>Error: Sesión invalida</h1>")
-		return '''
+		print("<h1>Error: Sesion invalida</h1>")
+		return
 	form = cgi.FieldStorage()
-	
 	
 	print("Content-Type: text/html\r\n")
 	print("")
@@ -44,30 +51,7 @@ def main():
 	
 	# Test if the file was uploaded
 	if fileitem.filename:
-
-		# strip leading path from file name
-		# to avoid directory traversal attacks
-		filename = os.path.basename(fileitem.filename)
-		print(f"<b> {filename}</b>")
-		
-		real = os.path.abspath(__file__)
-		dir_path = os.path.dirname(real)
-		
-
-		path_f = os.path.join(dir_path, "files", filename)
-		try:
-			f = open(path_f, 'wb', 10000)
-		except IOError as exc:
-			""" tb = sys.exc_info()[-1]
-			lineno = tb.tb_lineno
-			filename = tb.tb_frame.f_code.co_filename """
-			print('<b>{} <b>.'.format(exc.strerror))
-			sys.exit(exc.errno)
-		for chunk in fbuffer(fileitem.file):
-			f.write(chunk)
-		f.close()
-		message = 'The file "' + filename + '" was uploaded successfully'
-
+		handle_request_file(fileitem)
 	else:
 		message = 'No file was uploaded'
 	print(f"""
@@ -85,5 +69,4 @@ def main():
 
 
 if __name__ == "__main__":
-	
 	main()
