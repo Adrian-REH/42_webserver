@@ -4,7 +4,7 @@ import http.cookies
 from login_form import loginForm  # Importa la función loginForm
 import os
 
-def verify_session():
+def fetch_srv_session_id():
 	try:
 		cookie_header = os.environ.get('HTTP_COOKIE', '')
 		if not cookie_header:
@@ -22,13 +22,29 @@ def verify_session():
 def success():
 	mensaje = "¡Bienvenido, usuario logueado!"
 	mensaje_class = "success"
-	session_id = verify_session()
+	session_id = fetch_srv_session_id()
 	if not session_id:
-		print(f"Set-Cookie: session_id={session_id}")
+		print(f"Set-Cookie: session=invalid;")
+		print(f"Set-Cookie: session_id={session_id};")
 		print("Content-Type: text/html\r\n")
-		print("<h1>Error: Sesión inválida</h1>")
+		print(f"""<!DOCTYPE html>
+	<html lang="es">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Error: Sesión inválida</title>
+	</head>
+	<body>
+		<div class="container">
+			<div class="message Sesión inválida">
+				Sesión inválida
+			</div>
+		</div>
+	</body>
+	</html>""")
 		return False
-	print(f"Set-Cookie: session_id={session_id}")
+	print(f"Set-Cookie: session=valid;")
+	print(f"Set-Cookie: session_id={session_id};")
 	print("Content-Type: text/html\r\n")
 	print(f"""
 	<!DOCTYPE html>
@@ -97,9 +113,12 @@ def success():
 	</body>
 	</html>
 	""")
+	return 0
 
 def main():
 	form = cgi.FieldStorage()
+	print(form.getvalue('username'))
+	print(form.getvalue('password'))
 	if form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin':
 		success()
 	else:

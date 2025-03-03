@@ -13,6 +13,7 @@ struct Cookie {
 	bool isEmpty() {
 		return (value.empty() || name.empty() ) && expiration == 0;
 	}
+
 };
 
 

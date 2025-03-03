@@ -18,14 +18,15 @@ bool SessionCookieManager::isExpired(const Cookie& cookie) {
 Cookie SessionCookieManager::setCookieBySessionId(const std::string& session_id, int expirationInSeconds) {
 	std::time_t currentTime = std::time(0);
 	removeExpiredCookies();
-	if (getCookieBySessionId(session_id).isEmpty())
-		return Cookie();
+	Cookie cookie = getCookieBySessionId(session_id);
+	if (!cookie.isEmpty())
+		return cookie;
 	std::time_t expirationTime = currentTime + expirationInSeconds;
-	Cookie cookie;
 	cookie.name = "session_id";
 	cookie.value = session_id;
 	cookie.expiration = expirationTime;
 	_cookies[session_id] = cookie;
+	std::cout << cookie.value << std::endl;
 	return cookie;
 }
 

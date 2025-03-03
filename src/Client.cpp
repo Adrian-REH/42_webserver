@@ -169,6 +169,7 @@ Cookie Client::handle_cookie() {
 			std::string session_id = extractStrBetween(cookie_val, "session_id=", ";");
 			Logger::log(Logger::DEBUG, "Client.cpp", "Found Cookie: " + cookie_val + " Validating...");
 			cookie = sessionCM.getCookieBySessionId(session_id);
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie:display Name: " + cookie.name + ", value: "+ cookie.value+ ", expiration: " + to_string(cookie.expiration));
 		}
 	}
 	return cookie;
@@ -182,8 +183,8 @@ std::string Client::prepare_cgi_data(const ServerConfig& srv_conf, Cookie cookie
 	if (!cookie.isEmpty()) {
 		std::string session_status = SessionCookieManager::getInstance().isCookieExpired(cookie) ? "expired" : "valid";
 		http_cookie = "HTTP_COOKIE=session=" + session_status + "; session_id=" + cookie.value;
-	}
-
+	} else
+		http_cookie = "HTTP_COOKIE=session_id=" + generateSessionID(16);
 	return http_cookie;
 }
 
@@ -194,7 +195,9 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
         std::size_t pos_session_id = response.find("session_id=");
         if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
             std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie session_id Saving... value:" + session_id);
             cookie = sessionCM.setCookieBySessionId(session_id, 300);
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie Saved value:" + cookie.value);
         }
     }
 }
