@@ -69,9 +69,6 @@ def home():
                 display: inline-block;
                 color: #555555;
             }
-
-
-
             input[type="submit"] {
                 background-color: #007BFF;
                 color: white;
@@ -135,48 +132,48 @@ def home():
                 border-radius: 5px;
             }
                 /* Estilos para el contenedor de los archivos subidos */
-    .uploaded-files-card {
-        border: 1px solid #ddd;
-        padding: 20px;
-        margin-top: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        background-color: #f9f9f9;
-    }
+            .uploaded-files-card {
+                border: 1px solid #ddd;
+                padding: 20px;
+                margin-top: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                background-color: #f9f9f9;
+            }
 
-    .uploaded-files-card h2 {
-        margin-bottom: 15px;
-    }
+            .uploaded-files-card h2 {
+                margin-bottom: 15px;
+            }
 
-    .uploaded-files-card ul {
-        list-style-type: none;
-        padding: 0;
-    }
+            .uploaded-files-card ul {
+                list-style-type: none;
+                padding: 0;
+            }
 
-    .uploaded-files-card ul li {
-        background-color: #fff;
-        border: 1px solid #ddd;
-        margin-bottom: 10px;
-        padding: 10px;
-        border-radius: 5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+            .uploaded-files-card ul li {
+                background-color: #fff;
+                border: 1px solid #ddd;
+                margin-bottom: 10px;
+                padding: 10px;
+                border-radius: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
 
-    /* Estilos para el botón de borrar */
-    .uploaded-files-card ul li button {
-        background-color: red;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        cursor: pointer;
-        border-radius: 5px;
-    }
+            /* Estilos para el botón de borrar */
+            .uploaded-files-card ul li button {
+                background-color: red;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                cursor: pointer;
+                border-radius: 5px;
+            }
 
-    .uploaded-files-card ul li button:hover {
-        background-color: darkred;
-    }
+            .uploaded-files-card ul li button:hover {
+                background-color: darkred;
+            }
         </style>
     </head>
     <body>
@@ -205,7 +202,6 @@ def home():
                 </ul>
             </div>
         </div>
-        
     </body>
     <script>
         function deleteFile(fileName) {
