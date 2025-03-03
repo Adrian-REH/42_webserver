@@ -71,7 +71,7 @@ def home():
                 background-color: #007bff;
                 color: white;
             }}
-            
+        </style>
     </head>
     <body>
         <div class="container">
@@ -79,10 +79,11 @@ def home():
             <div class="message {mensaje_class}">
                 {mensaje}
             </div>
+            
         </div>
     </body>
-    </html>""")
-
+    </html>
+    """)
 
 
 

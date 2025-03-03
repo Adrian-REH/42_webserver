@@ -64,7 +64,6 @@ Esto enviará 10 solicitudes concurrentes por 30 segundos, verificando la estabi
 ## 5. Consideraciones Finales
 - El servidor nunca debe **caerse** o bloquearse.
 - El manejo de errores debe ser claro y comprensible.
-- Las pruebas deben realizarse con la ayuda del equipo para garantizar un entorno de prueba completo.
 
 ¡Buena suerte probando el CGI! 🚀
 
