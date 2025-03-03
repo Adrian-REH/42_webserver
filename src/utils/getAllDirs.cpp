@@ -24,7 +24,8 @@ std::vector<std::string> get_all_dirs(const char *dir_path) {
 			if (!ends_with(base, "/") && !base.empty())
 				base += "/";
 			dirname = base + dirname;
-			//std::cout << "[] entry : '" << dirname <<"'"<< std::endl; TODO DELETE LINE
+			if (entry->d_type == DT_DIR)
+				dirname += "/";
 			dirs.push_back(dirname);
 		}
 	}

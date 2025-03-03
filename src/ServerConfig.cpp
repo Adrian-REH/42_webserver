@@ -8,6 +8,8 @@ ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t 
 	_error_pages[404] = "/html/404.html";
 	_error_pages[408] = "/html/408.html";
 	_error_pages[405] = "/html/405.html";
+	_error_pages[414] = "/html/414.html";
+	_error_pages[415] = "/html/415.html";
 	_error_pages[204] = "/html/204.html";
 	_error_pages[301] = "/html/301.html";
 	_error_pages[500] = "/html/500.html";
