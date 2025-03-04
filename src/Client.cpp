@@ -165,8 +165,12 @@ Cookie Client::handle_cookie() {
 
 	if (!cookie_val.empty()) {
 		std::size_t pos_session_id = cookie_val.find("session_id=");
-		if (pos_session_id != std::string::npos && cookie_val.find(";", pos_session_id) != std::string::npos) {
-			std::string session_id = extractStrBetween(cookie_val, "session_id=", ";");
+		if (pos_session_id != std::string::npos) {
+			std::string session_id;
+			if (cookie_val.find(";", pos_session_id) != std::string::npos)
+				session_id = extractStrBetween(cookie_val, "session_id=", ";");
+			else
+				session_id = extractStrREnd(cookie_val, "session_id=");
 			Logger::log(Logger::DEBUG, "Client.cpp", "Found Session Cookie: " + session_id + " Validating...");
 			cookie = sessionCM.getCookieBySessionId(session_id);
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie:display Name: " + cookie.name + ", value: "+ cookie.value+ ", expiration: " + to_string(cookie.expiration));

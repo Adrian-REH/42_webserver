@@ -40,7 +40,7 @@ def handle_request_file(fileitem):
 def main():
 	session_id = verify_session()
 	if not session_id:
-		print(f"Set-Cookie: session_id={session_id}")
+		print(f"Set-Cookie: session={session_id}")
 		print("Content-Type: text/html\r\n")
 		print("<h1>Error: Sesion invalida</h1>")
 		return
