@@ -16,11 +16,10 @@ def test_post_login():
     response = requests.post(BASE_URL + "cgi-bin/login.py", data=data)
     assert response.status_code == 200
     assert "Set-Cookie" in response.headers
-    assert "Bienvenido, usuario logueado" in response.text
+    assert "Upload a file" in response.text
 
 def test_post_login_error():
     data = {"username": "admin", "password": "123"}
     response = requests.post(BASE_URL + "cgi-bin/login.py", data=data)
     assert response.status_code == 200
-    assert "Set-Cookie" in response.headers
-    assert "Formulario CGI en Python" in response.text
+    assert "Login Form" in response.text

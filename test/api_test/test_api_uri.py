@@ -15,7 +15,7 @@ def test_uri_file_extension():
     data = {"username": "admin", "password": "admin"}
     response = requests.post(BASE_URL + "cgi-bin/login.py", data=data)
     assert response.status_code == 200
-    assert "Formulario CGI en Python" in response.text
+    assert "Login Form" in response.text
 
 
 def test_uri_file_extension_noncgi():
@@ -37,4 +37,4 @@ def test_uri_dir_error():
 def test_uri_dir_index():
     response = requests.get(BASE_URL + "cgi-bin/")
     assert response.status_code == 200
-    assert "Formulario CGI en Python" in response.text
+    assert "Login Form" in response.text

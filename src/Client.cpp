@@ -350,6 +350,18 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		std::string path_error = srv_conf.get_error_page_by_code(415);
 		rs = resolve_html_path(path_error);
 	}
+	catch(HttpException::ForbiddenException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(403, "Forbidden");
+		std::string path_error = srv_conf.get_error_page_by_code(403);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::InternalServerErrorException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(500, "Internal Server Error");
+		std::string path_error = srv_conf.get_error_page_by_code(500);
+		rs = resolve_html_path(path_error);
+	}
 	rs_start_line.append(rs);
 	send_response(rs_start_line);
 	return 0;

@@ -5,6 +5,7 @@
 
 ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) {
 	_error_pages[400] = "/html/400.html";
+	_error_pages[403] = "/html/403.html";
 	_error_pages[404] = "/html/404.html";
 	_error_pages[408] = "/html/408.html";
 	_error_pages[405] = "/html/405.html";

@@ -163,6 +163,7 @@ std::string CGI::execute() {
 			{
 				case 1: throw HttpException::ForbiddenException();
 				case 2: throw HttpException::NotFoundException();
+				case 13: throw HttpException::ForbiddenException();
 				default: throw HttpException::InternalServerErrorException();
 			}
 		}
