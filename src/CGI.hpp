@@ -23,6 +23,7 @@ class CGI {
 		char** _env;
 		size_t _exec_timeout;
 		std::string _interpreter;
+		int	_status_code;
 
 	public:
 		/**
@@ -55,6 +56,7 @@ class CGI {
 		 * @throws std::runtime_error Si falla la creación del pipe o el fork.
 		 */
 		std::string execute();
+		int get_status_code();
 };
 
 #endif

@@ -4,10 +4,13 @@
 
 
 CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
-	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout), _interpreter(determine_interpreter()) {
+	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout), _interpreter(determine_interpreter()),_status_code(200) {
 		determine_interpreter();
 	}
 
+int CGI::get_status_code() {
+	return _status_code;
+}
 /**
  * @brief Determina el intérprete adecuado para el script según su extensión.
  * 
@@ -161,10 +164,11 @@ std::string CGI::execute() {
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
 			switch (ret)
 			{
-				case 1: throw HttpException::ForbiddenException();
-				case 2: throw HttpException::NotFoundException();
-				case 13: throw HttpException::ForbiddenException();
-				default: throw HttpException::InternalServerErrorException();
+				case 1: 
+				case 13: _status_code = 403; break;
+				case 2: _status_code = 404; break;
+				case 22: _status_code = 400; break;
+				default: _status_code = 500; break;
 			}
 		}
 		return (result);

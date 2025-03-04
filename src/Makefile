@@ -21,7 +21,7 @@ SRCS = main.cpp Server.cpp ServerConfig.cpp HttpServerManager.cpp Location.cpp \
 		utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
 		utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp \
 		utils/generateIndexHtml.cpp \
-		ParserConfig.cpp  Config.cpp  \
+		ParserConfig.cpp  Config.cpp HttpStatus.cpp \
 		SessionCookieManager.cpp
 OBJS = ${SRCS:.cpp=.o}
 

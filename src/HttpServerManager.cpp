@@ -151,6 +151,7 @@ void HttpServerManager::handle_epoll()
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);
 				}
+				deleteClient(it_cli->first);
 			}
 			else if (it_cli != _cli_srvs.end() && (events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
 			{

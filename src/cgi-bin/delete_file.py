@@ -28,7 +28,7 @@ def parser_body():
 			print(json.dumps({"status": "error", "message": "Cuerpo vacío"}))
 			sys.exit(1)
 	else:
-		print(json.dumps({"status": "error", "message": "Método no permitido"}))
+		print(json.dumps({"status": "error", "message": "Metodo no permitido"}))
 		sys.exit(1)
 
 def main():

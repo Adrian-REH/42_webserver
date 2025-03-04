@@ -8,6 +8,7 @@
 #include "SessionCookieManager.hpp"
 #include "Cookie.hpp"
 #include "ServerConfig.hpp"
+#include "HttpStatus.hpp"
 
 /**
  * @brief Constructor de la clase `Client`.
@@ -98,22 +99,22 @@ int Client::handle_request(ServerConfig srv_conf) {
 		}
 	} catch (HttpException::BadRequestException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(400, "Bad Request");
+		_error = HttpStatus::getInstance().getStatusByCode(400);
 	} catch (HttpException::NotFoundException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(404, "Not Found");
+		_error = HttpStatus::getInstance().getStatusByCode(404);
 	} catch (HttpException::RequestEntityTooLargeException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(413, "Request Entity Too Large");
+		_error = HttpStatus::getInstance().getStatusByCode(413);
 	} catch (HttpException::HTTPVersionNotSupportedException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(505, "HTTP Version Not Supported");
+		_error = HttpStatus::getInstance().getStatusByCode(505);
 	} catch (HttpException::RequestTimeoutException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(408, "Request Timeout Exception");
+		_error = HttpStatus::getInstance().getStatusByCode(408);
 	} catch (HttpException::RequestURITooLongException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		_error = std::make_pair<int, std::string>(414, "Request-URI Too Long");
+		_error = HttpStatus::getInstance().getStatusByCode(414);
 	}
 	
 	return 0;
@@ -141,8 +142,8 @@ std::string resolve_html_path(std::string path) {
 	return rs;
 }
 
-std::string create_start_line(int code, std::string message){
-	std::string start_line = "HTTP/1.1 " + to_string(code) +" "+ message +"\r\n";
+std::string create_start_line(std::pair<int , std::string > status){
+	std::string start_line = "HTTP/1.1 " + to_string(status.first) +" "+ status.second +"\r\n";
 	return start_line;
 }
 
@@ -219,7 +220,8 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 int Client::handle_response(ServerConfig  srv_conf) {
 	std::string script_path;
 	std::string rs;
-	std::string rs_start_line = create_start_line(200, "OK");
+	HttpStatus& httpStatus = HttpStatus::getInstance();
+	std::string rs_start_line = create_start_line(httpStatus.getStatusByCode(200));
 	std::string path = _request.get_path();
 	std::vector<std::string> files;
 	Location loc = srv_conf.findMatchingLocation(path);
@@ -227,8 +229,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
 
 	if (has_error()) {
-		rs_start_line = create_start_line(_error.first, _error.second);
-		std::string path_error = srv_conf.get_error_page_by_code(204);
+		rs_start_line = create_start_line(_error);
+		std::string path_error = srv_conf.get_error_page_by_code(_error.first);
 		rs = resolve_html_path(path_error);
 		rs_start_line.append(rs);
 		send_response(rs_start_line);
@@ -284,7 +286,6 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					tmp.erase(0, 1);
 				if (access(tmp.c_str(), R_OK ) == -1)
 					throw HttpException::ForbiddenException();
-				handle_connection(srv_conf, rs_start_line);
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
 				std::string root_dir = loc.get_root_directory();
@@ -298,9 +299,12 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				rs = cgi.execute();
 				update_cookie_from_response(rs, cookie);
 				//RESPONSE
+				rs_start_line = create_start_line(httpStatus.getStatusByCode(cgi.get_status_code()));
+				handle_connection(srv_conf, rs_start_line);
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
 			}
+
 			return 0;
 		}
 		
@@ -308,57 +312,58 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	}
 	catch(HttpException::NotAllowedMethodException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(405, "Not Allowed Method");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(405));
 		std::string path_error = srv_conf.get_error_page_by_code(405);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::BadRequestException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(400, "Bad Request");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(400));
 		std::string path_error = srv_conf.get_error_page_by_code(400);
-		rs = resolve_html_path(path_error);
+		if (rs.empty())
+			rs = resolve_html_path(path_error);
 		
 	}
 	catch(HttpException::NoContentException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(204, "Not Content");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(204));
 		std::string path_error = srv_conf.get_error_page_by_code(204);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::NotFoundException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(404, "Not Found");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(404));
 		std::string path_error = srv_conf.get_error_page_by_code(404);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::MovedPermanentlyRedirectionException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(301, "Moved Permanently Redirection");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(301));
 		rs = "Content-Type: text/html\r\n";
 		rs.append("Location: "+ loc.get_redirect_url() +"\r\n\r\n");
 		rs.append("<html><body>Redirigiendo...</body></html>");
 	}
 	catch(HttpException::RequestTimeoutException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(408, "Request Timeout");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(408));
 		std::string path_error = srv_conf.get_error_page_by_code(408);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::UnsupportedMediaTypeException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(415, "Unsupported Media Type");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(415));
 		std::string path_error = srv_conf.get_error_page_by_code(415);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::ForbiddenException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(403, "Forbidden");
+		rs_start_line = create_start_line(HttpStatus::getInstance().getStatusByCode(403));
 		std::string path_error = srv_conf.get_error_page_by_code(403);
 		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::InternalServerErrorException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
-		rs_start_line = create_start_line(500, "Internal Server Error");
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(500));
 		std::string path_error = srv_conf.get_error_page_by_code(500);
 		rs = resolve_html_path(path_error);
 	}

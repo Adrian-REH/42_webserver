@@ -29,6 +29,7 @@ def main():
 		home()
 	else:
 		loginForm()
+		sys.exit(22)
 
 if __name__ == "__main__":
 	main()

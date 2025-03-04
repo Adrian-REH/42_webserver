@@ -49,7 +49,7 @@ void Request::parse_headers(const std::string& headers_section) {
 			std::string key = line.substr(0, colon_pos);
 			std::string value = strtrim(line.substr(colon_pos + 2));
 			_headers[key] = value;
-			//Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
+			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
 	}
 	
@@ -71,7 +71,7 @@ void Request::parse_body(const std::string& body_section, size_t content_length)
 		throw HttpException::RequestEntityTooLargeException();
 	} else if (body_section.size() == content_length) {
 		_state = DONE;
-	}
+	} 
 }
 
 /**
@@ -229,27 +229,27 @@ bool isExpired(size_t expiration) {
  * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
  */
 void Request::parser(std::string req) {
-	//size_t content_length = 0; TODO: usar
-	Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
-	if (_state == INIT || _state == RECEIVING_HEADERS) {
-		if (_header_time == 0)
-			_header_time = std::time(0) + _header_timeout;
-		_raw_req += req;
-		receiving_headers();
-		if (isExpired(_header_time)) {
-			_state = DONE;
-			throw HttpException::RequestTimeoutException("Timeout header read");
+	try {
+		//size_t content_length = 0; TODO: usar
+		Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
+		if (_state == INIT || _state == RECEIVING_HEADERS) {
+			if (_header_time == 0)
+				_header_time = std::time(0) + _header_timeout;
+			_raw_req += req;
+			receiving_headers();
+			if (isExpired(_header_time))
+				throw HttpException::RequestTimeoutException("Timeout header read");
+		} else if (_state == RECEIVING_BODY) {
+			if (_body_time == 0)
+				_body_time = std::time(0) + _body_timeout;
+			receiving_body(req);
+			if (isExpired(_body_time))
+				throw HttpException::RequestTimeoutException("Timeout body read");
 		}
-	} else if (_state == RECEIVING_BODY) {
-		if (_body_time == 0)
-			_body_time = std::time(0) + _body_timeout;
-		receiving_body(req);
-		if (isExpired(_body_time)){
+	} catch (std::exception & e) {
 			_state = DONE;
-			throw HttpException::RequestTimeoutException("Timeout body read");
-		}
+			throw;
 	}
-	//TODO: Controlar si está DONE?
 }
 
 
