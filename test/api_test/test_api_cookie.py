@@ -38,7 +38,7 @@ def test_cookie_session_home():
     cookies = {'session': session_cookie, 'session_id': session_id_cookie}
     response = requests.post(BASE_URL + "cgi-bin/home.py", data=data, cookies=cookies)
     assert response.status_code == 200
-    assert "¡Bienvenido, usuario logueado!" in response.text
+    assert "Upload a file" in response.text
 
 def test_cookie_session_upload_file():
     # Datos de inicio de sesión

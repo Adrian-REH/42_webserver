@@ -32,9 +32,9 @@ def parser_body():
 		sys.exit(1)
 
 def main():
-	session_id = verify_session()
-	if not session_id:
-		print(f"Set-Cookie: session_id={session_id}")
+	session = verify_session()
+	if not session:
+		print(f"Set-Cookie: session={session}")
 		print("Content-Type: text/html\r\n")
 		print("<h1>Error: Sesion invalida</h1>")
 		sys.exit(errno.EACCES)  # Error: permisos denegados
