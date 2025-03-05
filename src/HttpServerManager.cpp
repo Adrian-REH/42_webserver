@@ -66,6 +66,12 @@ void HttpServerManager::stop() {
 	}
 	_cli_srvs.clear();
 	close(_epoll_fd);
+
+	for (it_clifd_srv = _sock_srvs.begin(); it_clifd_srv != _sock_srvs.end(); it_clifd_srv++) {
+		it_clifd_srv->second->deleteClients();
+		delete it_clifd_srv->second;
+	}
+	_sock_srvs.clear();
 }
 
 std::map<int, Server *>::iterator HttpServerManager::deleteClient(int client_fd) {
