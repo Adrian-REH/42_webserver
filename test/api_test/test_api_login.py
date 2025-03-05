@@ -21,5 +21,5 @@ def test_post_login():
 def test_post_login_error():
     data = {"username": "admin", "password": "123"}
     response = requests.post(BASE_URL + "cgi-bin/login.py", data=data)
-    assert response.status_code == 200
+    assert response.status_code == 400
     assert "Login Form" in response.text

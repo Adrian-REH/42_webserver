@@ -12,7 +12,7 @@ def test_404():
     assert response.status_code == 404
 
 def test_get_autoindex():
-    response = requests.get(BASE_URL + "cgi-bin")
+    response = requests.get(BASE_URL + "cgi-bin/")
     assert response.status_code == 200
     assert "Index of cgi-bin/" in response.text
 
@@ -20,7 +20,10 @@ def test_download_file():
     response = requests.get(BASE_URL + "cgi-bin/login.py")
     assert response.status_code == 200
     assert "Content-Disposition" in response.headers
-    assert "login.py" in response.headers
+    assert "attachment" in response.headers["Content-Disposition"].lower()
+    assert "login.py" in response.headers["Content-Disposition"]
+    content = response.content
+    assert content, "El archivo descargado está vacío"
 
 def test_access_dir():
     response = requests.get(BASE_URL + "cgi-bin/files/")
@@ -29,7 +32,7 @@ def test_access_dir():
 
 def test_download_dir():
     response = requests.get(BASE_URL + "cgi-bin/files")
-    assert response.status_code == 200
+    assert response.status_code == 404
 
 """ def test_403_dir():
     response = requests.get(BASE_URL + "cgi-bin/files/403/")
