@@ -319,6 +319,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	catch(HttpException::NotAllowedMethodException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(httpStatus.getStatusByCode(405));
+		rs_start_line.append("Allow: " + loc.get_limit_except().allowed_methods_to_str() + "\r\n\r\n");
 		std::string path_error = srv_conf.get_error_page_by_code(405);
 		rs = resolve_html_path(path_error);
 	}
