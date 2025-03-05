@@ -45,7 +45,7 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	env_strings.push_back("HTTP_REFERER=" + req.get_header_by_key("Referer"));
 	env_strings.push_back("HTTP_ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding"));
 
-	_env = new char*[env_strings.size() + 1];
+	_env = new char*[env_strings.size() + 1];//TODO: borrar _env hecho por new ???
 	for (size_t i = 0; i < env_strings.size(); ++i) {
 		_env[i] = (char*)env_strings[i].c_str();
 		char * s_cstr = new char[env_strings[i].size() + 1];

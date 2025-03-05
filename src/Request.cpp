@@ -145,23 +145,28 @@ void Request::read_chunked_body(){
 	size_t full_size = 0;
 	bool is_size_line = true;
 	std::string decoded_body;
-	
-	while (std::getline(stream, line) && line != "\r") {
+	Logger::log(Logger::INFO, "Request.cpp", "READING CHUNKED BODY");
+	while (std::getline(stream, line)) {
 		if (is_size_line)
 		{
 			size_line = line.substr(0, line.find("\r"));
 			if (size_line.empty())
 			{
-				std::cout << "size_line.empty" << std::endl;
-				return ;
+				//std::cout << "size_line.empty" << std::endl;
+				throw HttpException::BadRequestException("Multipart request malformed");
 			}
-			//std::cout << "size_line " << size_line << std::endl;
+			//std::cout << "size_line " << size_line << ", find ; " << size_line.find(";") << std::endl;
 			// Read body chunk
-			chunk_size = to_hex_ulong(size_line.substr(0, size_line.find(";")));
+			if (size_line.find(";") == std::string::npos)
+				chunk_size = to_hex_ulong(strtrim(size_line));
+			else
+				chunk_size = to_hex_ulong(size_line.substr(0, size_line.find(";")));
+			//Logger::log(Logger::INFO, "Request.cpp", "chunk_size " + ul_to_string(chunk_size));
 			full_size += chunk_size;
 			if (full_size > _location.get_client_max_body_size())
 				throw HttpException::RequestEntityTooLargeException();
 			std::getline(stream, line);
+			//Logger::log(Logger::INFO, "Request.cpp", "line " + line + ".");
 		}
 		
 		//std::cout << "chunk_size " << chunk_size << std::endl;
@@ -190,18 +195,25 @@ void Request::read_chunked_body(){
 			_body = decoded_body;
 			_state = DONE;
 			Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE CHUNKED BODY");
+			//Logger::log(Logger::INFO, "Request.cpp", "decoded_body: " + _body);
 			return ;
 		} else if (line.substr(0, line.find("\r")).size() < chunk_size)
 		{
 			//KEEP READING BYTES
+			Logger::log(Logger::INFO, "Request.cpp", "KEEP READING BYTES");
 			is_size_line = false;
 			decoded_body += (line + "\n");
-			chunk_size -= line.size() - 1;
+			chunk_size -= (line.size() + 1);
+			//Logger::log(Logger::INFO, "Request.cpp", "chunk_size " + ul_to_string(chunk_size));
 		} else if (line.substr(0, line.find("\r")).size() > chunk_size)
 			throw HttpException::BadRequestException("Body chunk of wrong size."); //
-		else 
+		else {
+			is_size_line = true;
 			decoded_body += line.substr(0, line.find("\r"));
+		}
+			
 	}
+	throw HttpException::BadRequestException("Body chunk of wrong size.");
 }
 
 bool Request::is_chunked_request() {
