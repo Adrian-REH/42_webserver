@@ -2,12 +2,14 @@
 
 import cgi
 import cgitb
+import os
 
 # Habilita el modo de depuración para mostrar errores en el navegador
 cgitb.enable()
 
 def loginForm():
 	# Obtener los datos del formulario
+ 
 	form = cgi.FieldStorage()
 	mensaje_class = "success"  # O "error" según corresponda
 	mensaje = ""  # Variable para el mensaje a mostrar
@@ -15,12 +17,13 @@ def loginForm():
 	username = form.getvalue("username", "")
 	password = form.getvalue("password", "")
 
-	# Verificación simple para asegurarnos de que los campos no estén vacíos
-	if username == "" or password == "":
-		mensaje = "Por favor, ingresa tu username y password."
-		mensaje_class = "error"
-	else:
-		mensaje = "Los datos han sido recibidos."
+	if os.environ.get("REQUEST_METHOD") == "POST":
+		# Verificación simple para asegurarnos de que los campos no estén vacíos
+		if username == "" or password == "":
+			mensaje = "Por favor, ingresa tu username y password."
+			mensaje_class = "error"
+		else:
+			mensaje = "Los datos han sido recibidos."
 
 	# Imprimir el encabezado y el cuerpo del HTML
 	print("Content-Type: text/html\r\n")  # Encabezado HTTP
@@ -131,3 +134,7 @@ def loginForm():
 	</body>
 	</html>
 	""")
+
+
+if __name__ == "__main__":
+	loginForm()

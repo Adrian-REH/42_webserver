@@ -5,6 +5,7 @@ from login_form import loginForm
 import os
 from auth import verify_session
 from home import home
+import sys
 
 def fetch_srv_session_id():
 	try:
@@ -22,6 +23,9 @@ def fetch_srv_session_id():
 
 def main():
 	form = cgi.FieldStorage()
+	if os.environ.get("REQUEST_METHOD") == "DELETE":
+		sys.exit(22)
+
 	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin') or verify_session():
 		session_id = fetch_srv_session_id()
 		print(f"Set-Cookie: session=valid;")

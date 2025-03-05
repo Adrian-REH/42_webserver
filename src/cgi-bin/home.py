@@ -3,6 +3,7 @@ import cgi
 import cgi
 import http.cookies
 import os
+import sys
 from auth import verify_session
 
 def list_files():
@@ -20,15 +21,6 @@ def list_files():
         """)
 
 def home():
-    mensaje = "INFO"
-    mensaje_class = "info"
-    if verify_session():
-        mensaje = "¡Bienvenido, usuario logueado!"
-        mensaje_class = "success"
-    else:
-        mensaje = "¡Error! No estás logueado."
-        mensaje_class = "error"
-    
     print("Content-type: text/html\n")
     print("""
     <!DOCTYPE html>
@@ -240,7 +232,66 @@ def home():
     </html>
     """)
 
+def verify_home():
+    mensaje = "INFO"
+    mensaje_class = "info"
+    if not verify_session():
+        print(f"Set-Cookie: session=invalid;")
+        print("Content-Type: text/html\r\n")
+        print(f"""<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Prohibido</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    background-color: #f8f9fa;
+                    margin: 0;
+                }}
+                .container {{
+                    text-align: center;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+                }}
+                .message {{
+                    font-size: 24px;
+                    color: #333;
+                    margin-bottom: 20px;
+                }}
+                .button {{
+                    display: inline-block;
+                    padding: 10px 20px;
+                    font-size: 18px;
+                    color: white;
+                    background-color: #007bff;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    transition: background 0.3s ease;
+                }}
+                .button:hover {{
+                    background-color: #0056b3;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <a class="button" href="/cgi-bin/login.py" >Volver a login</a>
+            </div>
+        </body>
+        </html>""")
+        sys.exit(112)
+    home()
 
 
 if __name__ == "__main__":
-	home()
+    if os.environ.get("REQUEST_METHOD") == "DELETE":
+        sys.exit(92)
+    verify_home()

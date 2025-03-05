@@ -9,26 +9,22 @@ import json
 import errno
 
 def parser_body():
-	if os.environ.get("REQUEST_METHOD") == "DELETE":
-		content_length = os.environ.get("CONTENT_LENGTH", "0")
-		if content_length.isdigit() and int(content_length) > 0:
-			body = sys.stdin.read(int(content_length))  # Leer el body de la request
-			try:
-				data = json.loads(body)
-				file_id = data.get("fileId")
-				if file_id:
-					return file_id
-				else:
-					print(json.dumps({"status": "error", "message": "Falta fileId"}))
-					sys.exit(1)
-			except json.JSONDecodeError:
-				print(json.dumps({"status": "error", "message": "JSON inválido"}))
+	content_length = os.environ.get("CONTENT_LENGTH", "0")
+	if content_length.isdigit() and int(content_length) > 0:
+		body = sys.stdin.read(int(content_length))  # Leer el body de la request
+		try:
+			data = json.loads(body)
+			file_id = data.get("fileId")
+			if file_id:
+				return file_id
+			else:
+				print(json.dumps({"status": "error", "message": "Falta fileId"}))
 				sys.exit(1)
-		else:
-			print(json.dumps({"status": "error", "message": "Cuerpo vacío"}))
+		except json.JSONDecodeError:
+			print(json.dumps({"status": "error", "message": "JSON inválido"}))
 			sys.exit(1)
 	else:
-		print(json.dumps({"status": "error", "message": "Metodo no permitido"}))
+		print(json.dumps({"status": "error", "message": "Cuerpo vacío"}))
 		sys.exit(1)
 
 def main():
@@ -86,4 +82,9 @@ def main():
 
 
 if __name__ == "__main__":
-	main()
+	if os.environ.get("REQUEST_METHOD") == "DELETE":
+		main()
+	else:
+		print("Content-Type: text/html\r\n")
+		print("<h1>Error: Sesion invalida</h1>")
+		sys.exit(95)
