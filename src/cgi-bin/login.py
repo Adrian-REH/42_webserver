@@ -24,7 +24,7 @@ def fetch_srv_session_id():
 def main():
 	form = cgi.FieldStorage()
 	if os.environ.get("REQUEST_METHOD") == "DELETE":
-		sys.exit(22)
+		sys.exit(92)
 
 	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin') or verify_session():
 		session_id = fetch_srv_session_id()
@@ -33,7 +33,8 @@ def main():
 		home()
 	else:
 		loginForm()
-		sys.exit(22)
+		if os.environ.get("REQUEST_METHOD") == "POST":
+			sys.exit(22)
 
 if __name__ == "__main__":
 	main()
