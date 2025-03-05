@@ -168,6 +168,8 @@ std::string CGI::execute() {
 				case 13: _status_code = 403; break;
 				case 2: _status_code = 404; break;
 				case 22: _status_code = 400; break;
+				case 95: _status_code = 405; break;
+				case 112: _status_code = 302; break;
 				default: _status_code = 500; break;
 			}
 		}

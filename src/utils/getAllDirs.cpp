@@ -19,13 +19,15 @@ std::vector<std::string> get_all_dirs(const char *dir_path) {
 		// Ignorar las entradas "." y ".."
 		if (dirname != "." && dirname != ".."){
 			std::string base(extractStrREnd(dir_path, "/"));
-			if (starts_with(base, "/"))
-				base.erase(0,1);
+		/* 	if (starts_with(base, "/"))
+				base.erase(0,1); */
 			if (!ends_with(base, "/") && !base.empty())
 				base += "/";
-			dirname = base + dirname;
-			if (entry->d_type == DT_DIR)
+			//dirname = base + dirname;
+			if (entry->d_type == DT_DIR){
 				dirname += "/";
+			}
+			std::cout << dirname << std::endl;
 			dirs.push_back(dirname);
 		}
 	}

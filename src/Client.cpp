@@ -320,9 +320,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());
 		rs_start_line = create_start_line(httpStatus.getStatusByCode(400));
 		std::string path_error = srv_conf.get_error_page_by_code(400);
-		if (rs.empty())
-			rs = resolve_html_path(path_error);
-		
+		rs = resolve_html_path(path_error);
 	}
 	catch(HttpException::NoContentException &e) {
 		Logger::log(Logger::ERROR, "Client.cpp", e.what());

@@ -97,7 +97,7 @@ Location ServerConfig::findMatchingLocation(const std::string path) {
 	if (it == _locations_conf.end()) {
 		for (it = _locations_conf.begin(); it != _locations_conf.end(); it++) {
 			std::string prefix = it->first;
-			if (path.size() < prefix.size())
+			if (path.size()  < prefix.size())
 				continue ;
 			int ocurrences = countOccurrences(path, prefix);
 			if ( ocurrences > tmp_max_ocurrences) {
