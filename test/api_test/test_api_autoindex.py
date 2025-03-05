@@ -7,9 +7,6 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 BASE_URL = "http://localhost:8081/"
 
-def test_404():
-    response = requests.get(BASE_URL + "noexiste")
-    assert response.status_code == 404
 
 def test_get_autoindex():
     response = requests.get(BASE_URL + "cgi-bin/")

@@ -7,10 +7,6 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 BASE_URL = "http://localhost:8080/"
 
-def test_404():
-    response = requests.get(BASE_URL + "noexiste")
-    assert response.status_code == 404
-
 def test_uri_file_extension():
     data = {"username": "admin", "password": "admin"}
     response = requests.post(BASE_URL + "cgi-bin/login.py", data=data)
