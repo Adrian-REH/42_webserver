@@ -1,7 +1,14 @@
 
 #include "ParserConfig.hpp"
 
-ParserConfig::ParserConfig(const char *file_name): _file_name(file_name), _content_file(readFileName(_file_name)) {}
+const char* is_file_conf(const char *str) {
+	std::string filename(str);
+	if (ends_with(filename, ".conf"))
+		return str;
+	throw std::runtime_error("Error de parseo: El archivo no finaliza con .conf");
+}
+
+ParserConfig::ParserConfig(const char *file_name): _file_name(file_name), _content_file(readFileName(is_file_conf(_file_name))) {}
 
 void ParserConfig::init_automata() {
 	_automata_srv["listen "].setSetter(&ServerConfig::set_port, Setter<ServerConfig>::SIZE_T);
