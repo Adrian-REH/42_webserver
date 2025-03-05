@@ -27,3 +27,8 @@ def test_uri_404():
     response = requests.get(BASE_URL + "cgi-bin/error/hola!")
     assert response.status_code == 404
     assert "Not Found" in response.text
+
+def test_uri_204():
+    response = requests.get(BASE_URL + "cgi-bin/auth.py")
+    assert response.status_code == 204
+    assert not response.text
