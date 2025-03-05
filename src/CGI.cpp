@@ -164,7 +164,7 @@ std::string CGI::execute() {
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
 			switch (ret)
 			{
-				case 1: 
+				case 1: _status_code = 502; break;
 				case 13: _status_code = 403; break;
 				case 2: _status_code = 404; break;
 				case 22: _status_code = 400; break;

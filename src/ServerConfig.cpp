@@ -15,6 +15,7 @@ ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t 
 	_error_pages[204] = "/html/204.html";
 	_error_pages[301] = "/html/301.html";
 	_error_pages[500] = "/html/500.html";
+	_error_pages[502] = "/html/502.html";
 }
 
 ServerConfig &ServerConfig::set_max_req(const size_t max_req) {

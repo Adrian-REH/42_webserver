@@ -301,6 +301,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				//RESPONSE
 				rs_start_line = create_start_line(httpStatus.getStatusByCode(cgi.get_status_code()));
 				handle_connection(srv_conf, rs_start_line);
+				if (rs.empty())
+					rs = resolve_html_path(srv_conf.get_error_page_by_code(cgi.get_status_code()));
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
 			}
