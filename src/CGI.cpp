@@ -90,6 +90,10 @@ std::string CGI::execute() {
 	if (pid == 0) {
 		try {
 			if (chdir(_working_dir.c_str()) == -1) {
+				close(cgi_response[0]);
+				close(cgi_response[1]);
+				close(cgi_io[0]);
+				close(cgi_io[1]);
 				exit(errno);
 			}
 
