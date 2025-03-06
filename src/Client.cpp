@@ -174,7 +174,7 @@ Cookie Client::handle_cookie() {
 				session_id = extractStrREnd(cookie_val, "session_id=");
 			Logger::log(Logger::DEBUG, "Client.cpp", "Found Session Cookie: " + session_id + " Validating...");
 			cookie = sessionCM.getCookieBySessionId(session_id);
-			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie:display Name: " + cookie.name + ", value: "+ cookie.value+ ", expiration: " + to_string(cookie.expiration));
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie:display Name: " + cookie.get_name() + ", value: "+ cookie.get_value()+ ", expiration: " + to_string(cookie.get_expiration()));
 		}
 	}
 	return cookie;
@@ -187,7 +187,7 @@ std::string Client::prepare_cgi_data(const ServerConfig& srv_conf, Cookie cookie
 	std::string http_cookie;
 	if (!cookie.isEmpty()) {
 		std::string session_status = SessionCookieManager::getInstance().isCookieExpired(cookie) ? "expired" : "valid";
-		http_cookie = "HTTP_COOKIE=session=" + session_status + "; session_id=" + cookie.value;
+		http_cookie = "HTTP_COOKIE=session=" + session_status + "; session_id=" + cookie.get_value();
 	} else
 		http_cookie = "HTTP_COOKIE=session_id=" + generateSessionID(16);
 	return http_cookie;
@@ -200,8 +200,8 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 	
 	if (pos_session_id != std::string::npos) {
 		if (!cookie.isEmpty() && pos_session == std::string::npos) {
-			sessionCM.deleteCookieBySessionId(cookie.value);
-			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie deleted value:" + cookie.value);
+			sessionCM.deleteCookieBySessionId(cookie.get_value());
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie deleted value:" + cookie.get_value());
 			return ;
 		}
 		if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
@@ -209,7 +209,7 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 			std::cout << to_string(pos_session == std::string::npos) << " " << std::endl;
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie session_id Saving... value:" + session_id);
 			cookie = sessionCM.setCookieBySessionId(session_id, 300);
-			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie Saved value:" + cookie.value);
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie Saved value:" + cookie.get_value());
 		}
 	}
 }

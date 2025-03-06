@@ -12,7 +12,7 @@ SessionCookieManager& SessionCookieManager::getInstance() {
 
 bool SessionCookieManager::isExpired(const Cookie& cookie) {
 	std::time_t currentTime = std::time(0);
-	return difftime(currentTime, cookie.expiration) > 0;
+	return difftime(currentTime, cookie.get_expiration()) > 0;
 }
 
 Cookie SessionCookieManager::setCookieBySessionId(const std::string& session_id, int expirationInSeconds) {
@@ -22,11 +22,11 @@ Cookie SessionCookieManager::setCookieBySessionId(const std::string& session_id,
 	if (!cookie.isEmpty())
 		return cookie;
 	std::time_t expirationTime = currentTime + expirationInSeconds;
-	cookie.name = "session_id";
-	cookie.value = session_id;
-	cookie.expiration = expirationTime;
+	cookie.set_name("session_id");
+	cookie.set_value(session_id);
+	cookie.set_expiration(expirationTime);
 	_cookies[session_id] = cookie;
-	std::cout << cookie.value << std::endl;
+	std::cout << cookie.get_value() << std::endl;
 	return cookie;
 }
 
