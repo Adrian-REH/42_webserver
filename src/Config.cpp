@@ -14,9 +14,7 @@ void Config::addServerConf(ServerConfig srv_conf) {
 	std::map<int, ServerConfig>::iterator it = _srvs_conf.find(srv_conf.get_port());
 
 	if (it != _srvs_conf.end())
-		throw Config::ConfigServerNameExistException();
-	if (srv_conf.get_port() == 0)
-		throw std::runtime_error("The Server not contain server_name");
+		throw Config::ConfigServerPortExistException( to_string(srv_conf.get_port()));
 	_srvs_conf[srv_conf.get_port()] = srv_conf;
 }
 

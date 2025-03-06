@@ -30,10 +30,14 @@ class Config {
 			}
 	};
 
-	class ConfigServerNameExistException : public std::exception {
+	class ConfigServerPortExistException : public std::exception {
+		private:
+			std::string _message;
 		public:
+			ConfigServerPortExistException(std::string message = ""):_message("The server port: " + message + " already exist") {}
+			virtual ~ConfigServerPortExistException() throw() {}
 			const char* what() const throw() {
-				return "The server_name already exists";
+				return (_message).c_str();
 			}
 	};
 };
