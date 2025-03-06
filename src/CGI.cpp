@@ -78,50 +78,56 @@ std::string CGI::execute() {
 	int cgi_io[2];
 	int cgi_response[2];
 	Logger::log(Logger::DEBUG, "CGI.cpp", "Executing CGI...");
+
 	if (pipe(cgi_io) < 0)
 		throw HttpException::InternalServerErrorException();
-	if (pipe(cgi_response) < 0)
+	if (pipe(cgi_response) < 0) {
+		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
-
+	}
+		
 	pid_t pid = fork();
-	if (pid < 0)
+	if (pid < 0) {
+		closeFDs(cgi_response);
+		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
-
+	}
+	
 	if (pid == 0) {
-		try {
-			if (chdir(_working_dir.c_str()) == -1) {
-				closeFDs(cgi_response);
-				closeFDs(cgi_io);
-				exit(errno);
-			}
-
-			char* argv[] = {
-				(char*)_interpreter.c_str(),
-				(char*)_script_path.c_str() , // Quito el primer caracter '/'
-				NULL
-			};
-			if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
-				(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
-			if (dup2(cgi_io[0], STDIN_FILENO) < 0)
-				(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+		if (chdir(_working_dir.c_str()) == -1) {
 			closeFDs(cgi_response);
 			closeFDs(cgi_io);
-			execve(_interpreter.c_str(), argv, _env);
-			exit(errno);
-		} catch (const std::exception&  ) {
 			exit(errno);
 		}
+
+		char* argv[] = {
+			(char*)_interpreter.c_str(),
+			(char*)_script_path.c_str(),
+			NULL
+		};
+
+		if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
+			(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+		if (dup2(cgi_io[0], STDIN_FILENO) < 0)
+			(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+		
+		closeFDs(cgi_response);
+		closeFDs(cgi_io);
+		execve(_interpreter.c_str(), argv, _env);
+		exit(errno);
 	} else {
 		close(cgi_io[0]);
 		Logger::log(Logger::DEBUG,"CGI.cpp","Body Writing.. size:" + to_string(_request.get_body().size()));
 		size_t chunk_size = 8192;
 		size_t written = 0;
+
 		while (written < _request.get_body().size()) {
 			size_t to_write = std::min(chunk_size, _request.get_body().size() - written);
 			ssize_t bytes_written = write(cgi_io[1], _request.get_body().c_str() + written, to_write);
 			if (bytes_written <= 0) break;
 			written += bytes_written;
 		}
+
 		close(cgi_io[1]);
 		close(cgi_response[1]);
 		fd_set set;
@@ -139,9 +145,13 @@ std::string CGI::execute() {
 		Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(pid) + " response nfds: " + to_string(nfds));
 		if (nfds == 0) {
 			kill(pid, SIGKILL);
+			close(cgi_response[0]);
 			throw HttpException::RequestTimeoutException("Timeout CGI execution");
-		} else if (nfds < 0)
+		} else if (nfds < 0) {
+			close(cgi_response[0]);
 			throw HttpException::InternalServerErrorException();
+		}
+			
 		//Obtengo el estado del pid
 		waitpid(pid, &status, 0);
 		int ret = 0;
@@ -162,22 +172,25 @@ std::string CGI::execute() {
 		while ((bytes_read = read(cgi_response[0], buffer, sizeof(buffer))) > 0) {
 			result.append(buffer, bytes_read);
 			std::time_t currentTime = std::time(0);
-			if (difftime(currentTime, expired) > 0)
+			if (difftime(currentTime, expired) > 0) {
+				close(cgi_response[0]);
 				throw HttpException::RequestTimeoutException();
+			}	
 		}
 		close(cgi_response[0]);
+
 		if (ret) {
 			std::string error(strerror(ret));
 			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
 			switch (ret)
 			{
-				case 1: _status_code = 502; break;
-				case 13: _status_code = 403; break;
-				case 2: _status_code = 404; break;
-				case 22: _status_code = 400; break;
-				case 95: _status_code = 405; break;
+				case 1	: _status_code = 502; break;
+				case 13	: _status_code = 403; break;
+				case 2	: _status_code = 404; break;
+				case 22	: _status_code = 400; break;
+				case 95	: _status_code = 405; break;
 				case 112: _status_code = 302; break;
-				default: _status_code = 500; break;
+				default	: _status_code = 500; break;
 			}
 		}
 		return (result);
