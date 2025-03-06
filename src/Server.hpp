@@ -7,7 +7,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <poll.h>
-#include <sys/epoll.h> // for epoll_create1(), epoll_ctl(), struct epoll_event
+#include <sys/epoll.h> // for epoll_create(), epoll_ctl(), struct epoll_event
 #include <map>
 #include "Client.hpp"
 #include <stdexcept>

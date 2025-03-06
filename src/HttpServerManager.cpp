@@ -23,6 +23,7 @@ int HttpServerManager::start() {
 			close(*it);
 		return -1;
 	}
+	fcntl(_epoll_fd, F_SETFD, FD_CLOEXEC);
 
 	for (it = srvs_conf.begin(); it != srvs_conf.end(); it++) {
 		socket_fd = create_socket_fd(it->second.get_port());
@@ -192,7 +193,7 @@ void HttpServerManager::handle_epoll()
 int HttpServerManager::create_socket_fd(int port) {
 	int opt = 1;
 	struct sockaddr_in addr;
-	int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	int socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	if (socket_fd == -1) {
 		perror("Error al crear el socket");
 		return (-1);

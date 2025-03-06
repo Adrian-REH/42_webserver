@@ -102,6 +102,7 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 		return std::make_pair(this, -1);
 	}
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
+	fcntl(client_fd, F_SETFD, FD_CLOEXEC);
 	ev.events = EPOLLIN | EPOLLET;
 	ev.data.fd = client_fd;
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
