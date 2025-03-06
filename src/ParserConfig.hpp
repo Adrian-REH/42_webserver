@@ -107,6 +107,7 @@ class ParserConfig {
 	private:
 		const char *_file_name;
 		std::deque<std::string> _content_file;
+		std::deque<std::string>::iterator _it;
 
 		LimitExcept parserLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
 		Location parserLocation(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end);
@@ -119,10 +120,12 @@ class ParserConfig {
 	public:
 		void init_automata();
 		ParserConfig(const char *file_name = "ws.conf");
+		std::string get_last_lane_parser();
 		int dumpRawData(const char *file_name);
 		/**
 		 * @brief Busco en el archivo la configuracion necesaria para ServerConfig
 		 */
 		void execute(char **env);
 };
+
 #endif

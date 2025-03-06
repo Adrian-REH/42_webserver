@@ -31,13 +31,14 @@ LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &i
 	LimitExcept limExc;
 	size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
 	size_t bracketPos = it->find("{", lmtPos); // Encuentra el '}' después de "limit_except "
-	std::string strmethods = it->substr(lmtPos, bracketPos - lmtPos);
 	std::map<std::string, Setter<LimitExcept> >::iterator aut_it;
+	std::string strmethods = it->substr(lmtPos, bracketPos - lmtPos);
 	std::deque<std::string> methods = split(strmethods, ' ');
 	std::deque<std::string>::iterator its;
+	if (methods.size() <= 0)
+		throw Config::ConfigNotFoundException();
 	for (its = methods.begin(); its != methods.end(); its++)
 		limExc.addAllowedMethod(*its);
-
 
 	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
@@ -148,19 +149,27 @@ int ParserConfig::dumpRawData(const char *file_name)
  */
 void ParserConfig::execute(char **env) {
 	Config &conf = Config::getInstance();
-	std::deque<std::string>::iterator it;
 	init_automata();
 	(void)env; // FIXME: Se precisa el env para cada ejecucion de CGI?, o es posible hacerlo sin utilizar el ENV que se envie, de igual forma se puede utilizar 
 	if (_content_file.size() <= 0)
 		throw std::runtime_error("Error not config");
-	for (it = _content_file.begin(); it != _content_file.end(); ++it) {
-		std::string line = (*it);
+	for (_it = _content_file.begin(); _it != _content_file.end(); ++_it) {
+		std::string line = (*_it);
 		std::cout << line << std::endl;
 		if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
-			conf.addServerConf(parserServerConfig(it, _content_file.end()));
+			conf.addServerConf(parserServerConfig(_it, _content_file.end()));
 		}
 	}
-
 }
 /* Add allowed methods and search through them to get if its permitted
 */
+
+
+std::string ParserConfig::get_last_lane_parser() {
+	std::deque<std::string>::iterator it_content;
+	int line_n = 1;
+	for (it_content = _content_file.begin(); it_content != _it ; it_content++) {
+		line_n++;
+	}
+	return std::string(_file_name) + ":" + to_string(line_n)+ ", \n line: " + *_it;
+}
