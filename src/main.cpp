@@ -13,6 +13,7 @@ void	sigint_handler(int signum)
 }
 
 int main(int argc, char **argv, char **env) {
+	//TODO: cambiar por signal()
 	struct sigaction	sa;
 	sa.sa_handler = sigint_handler;
 	sa.sa_flags = (sigemptyset(&sa.sa_mask), 0);
