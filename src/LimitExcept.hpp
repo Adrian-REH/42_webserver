@@ -33,6 +33,12 @@ class  LimitExcept {
 
 		std::string allowed_methods_to_str();
 
+		class LimitExceptionNotAllowedMethodException: public std::exception {
+			public:
+				const char* what() const throw() {
+					return "Limit Exception not allowed method";
+				}
+		};
 };
 
 #endif

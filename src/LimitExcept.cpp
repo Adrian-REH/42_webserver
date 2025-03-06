@@ -8,6 +8,8 @@ LimitExcept::LimitExcept(const std::vector<std::string>& methods, const std::str
 
 // Agregar un método permitido
 LimitExcept &LimitExcept::addAllowedMethod(const std::string& method) {
+	if (method != "POST" && method != "GET" && method != "DELETE")
+		throw LimitExcept::LimitExceptionNotAllowedMethodException();
 	_allowedMethods.insert(method);
 	return *this;
 }

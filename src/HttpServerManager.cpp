@@ -143,7 +143,7 @@ void HttpServerManager::handle_epoll()
 			}
 			else if (it_cli != _cli_srvs.end() && ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP))) {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Failed event");
-					deleteClient(it_cli->first);
+				deleteClient(it_cli->first);
 			}
 			else if (it_cli != _cli_srvs.end() &&  (events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
 			{
@@ -156,6 +156,7 @@ void HttpServerManager::handle_epoll()
 				if (set_event_action(it_cli->first, EPOLLIN) < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);
+					continue;
 				}
 				deleteClient(it_cli->first);
 			}
@@ -173,7 +174,6 @@ void HttpServerManager::handle_epoll()
 					deleteClient(it_cli->first);
 					continue ;
 				}
-
 				if (client && client->get_request().get_state() == 3 && set_event_action(it_cli->first, EPOLLOUT) < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLOUT to client with FD: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);
