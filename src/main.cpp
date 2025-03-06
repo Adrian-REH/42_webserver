@@ -13,13 +13,9 @@ void	sigint_handler(int signum)
 }
 
 int main(int argc, char **argv, char **env) {
-	//TODO: cambiar por signal()
-	struct sigaction	sa;
-	sa.sa_handler = sigint_handler;
-	sa.sa_flags = (sigemptyset(&sa.sa_mask), 0);
-	(sigaction(SIGINT, &sa, NULL), sigaction(SIGQUIT, &sa, NULL));
-	sigaction(SIGKILL, &sa, NULL);
-	sigaction(SIGPIPE, &sa, NULL);
+	signal(SIGINT, sigint_handler); //TODO: revisar
+	signal(SIGKILL, sigint_handler);
+	signal(SIGPIPE, sigint_handler);
 	if (argc != 2)
 		return 1;
 	ParserConfig parserSrv;
