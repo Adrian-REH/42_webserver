@@ -8,9 +8,14 @@ CGI::CGI(const std::string& working_dir, const std::string& script_path, Request
 		determine_interpreter();
 	}
 CGI::~CGI() {
-	if (_env && _env[0])
+	
+	if (_env) {
+		for (int i = 0; _env[i] != 0; i++)
+			delete [] _env[i];
 		delete [] _env;
+	}
 }
+
 int CGI::get_status_code() {
 	return _status_code;
 }
@@ -34,7 +39,7 @@ std::string CGI::determine_interpreter() const {
 
 int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	std::vector<std::string> env_strings;
-	env_strings.push_back(http_cookie);
+	env_strings.push_back(std::string(http_cookie));
 	env_strings.push_back("REQUEST_METHOD=" + req.get_method());
 	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
 	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("Content-Length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
@@ -48,14 +53,12 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	env_strings.push_back("HTTP_REFERER=" + req.get_header_by_key("Referer"));
 	env_strings.push_back("HTTP_ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding"));
 
-	_env = new char*[env_strings.size() + 1];//TODO: borrar _env hecho por new ???
+	_env = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); ++i) {
-		_env[i] = (char*)env_strings[i].c_str();
-		char * s_cstr = new char[env_strings[i].size() + 1];
-		std::strcpy(s_cstr, env_strings[i].c_str());
-		_env[i] = s_cstr;
+		_env[i] = new char[env_strings[i].size() + 1];
+		std::strcpy(_env[i], env_strings[i].c_str());
 	}
-	_env[env_strings.size()] = NULL;  // El último elemento debe ser NULL
+	_env[env_strings.size()] = 0;  // El último elemento debe ser NULL
 	
 	return 0;
 }
