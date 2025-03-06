@@ -61,7 +61,7 @@ void Server::deleteClient(const int client_fd) {
 }
 
 void Server::deleteClients() {
-	Logger::log(Logger::DEBUG, "Server.cpp", "Deleting all clients: ");
+	Logger::log(Logger::DEBUG, "Server.cpp", "Deleting all clients");
 
 	std::map<int, Client *>::iterator it;
 	for (it = _clients.begin(); it != _clients.end() ; it++) {

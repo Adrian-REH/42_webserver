@@ -71,7 +71,7 @@ int Client::handle_request(ServerConfig srv_conf) {
 		//_request.set_state(0);
 		while (true) {
 			bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
-			std::cout << "bytes_received " << bytes_received << std::endl; 
+			//std::cout << "bytes_received " << bytes_received << std::endl; 
 			if (bytes_received > 0) {
 				Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
 				request_data.append(buffer, bytes_received);
@@ -206,7 +206,6 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 		}
 		if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
 			std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
-			std::cout << to_string(pos_session == std::string::npos) << " " << std::endl;
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie session_id Saving... value:" + session_id);
 			cookie = sessionCM.setCookieBySessionId(session_id, 300);
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie Saved value:" + cookie.get_value());
@@ -237,7 +236,6 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		return 0;
 	}
 	try {
-		std::cout << _request.get_method() << std::endl;
 		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
 			throw HttpException::NotAllowedMethodException();
 		else if (!loc.get_redirect_url().empty())
@@ -256,7 +254,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		if (loc.get_auto_index()) {
 			//TODO en caso de  ser un file sin extencion como hago para que se descargue?
 			//TODO: Agregar timeout
-			std::cout << script_path << std::endl;
+			//std::cout << script_path << std::endl;
 			
 			if (script_path[0] == '/')
 				script_path.erase(0, 1);

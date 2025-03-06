@@ -103,7 +103,7 @@ std::string Location::buildFullPath(const std::string &root,const std::string pa
 int Location::findScriptPath(const std::string &url_path, std::string &final_path) {
 	std::string path = extractStrEnd(url_path, _path);
 	std::string file;
-	std::cout << "[DEBUG] begin path " << path << std::endl;
+	//std::cout << "[DEBUG] begin path " << path << std::endl;
 	// Case 1: Path is base root '/'
 	if (!_index.empty() && path.empty() && _path == url_path)
 		return final_path = buildFullPath(_root_directory, "", _index), 0;
@@ -137,7 +137,7 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 				return final_path = buildFullPath(dir, "", file), 0;
 			}
 		}
-		std::cout << "sss"<< std::endl;
+	
 		if (it == _files.end() && !file.empty())
 			throw HttpException::NotFoundException();
 	} catch (const std::exception &e){

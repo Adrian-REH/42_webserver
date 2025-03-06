@@ -119,7 +119,7 @@ class ParserConfig {
 		
 	public:
 		void init_automata();
-		ParserConfig(const char *file_name = "ws.conf");
+		ParserConfig(const char *file_name);
 		std::string get_last_lane_parser();
 		int dumpRawData(const char *file_name);
 		/**

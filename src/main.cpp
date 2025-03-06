@@ -16,27 +16,22 @@ int main(int argc, char **argv, char **env) {
 	signal(SIGINT, sigint_handler); //TODO: revisar
 	signal(SIGKILL, sigint_handler);
 	signal(SIGPIPE, sigint_handler);
-	if (argc != 2)
+	
+	if (argc != 2) {
+		std::cerr << "[ERROR] Wrong number of arguments: " << argv[0] << " configuration_filename" << std::endl;
 		return 1;
-	ParserConfig parserSrv;
-	try
-	{
+	}
+	
+	try {
 		std::cout << argv[1] << std::endl;
-		parserSrv = argv[1];
-		if (argc > 2)
-		{
-			std::cerr << "[ERROR] Wrong number of arguments: " << argv[0] << " configuration_filename" << std::endl;
-			return 1;
-		}
-		else if (argc == 2 && !parserSrv.dumpRawData(argv[1]))
+		ParserConfig parserSrv(argv[1]);
+		if (!parserSrv.dumpRawData(argv[1]))
 			return 1;
 		parserSrv.execute(env);
 		HttpServerManager httpManager;
 		httpManager.start();
 	}
-	catch(const std::exception& e)
-	{
-		Logger::log(Logger::ERROR, "main.cpp", std::string(e.what()) + ", File: " + parserSrv.get_last_lane_parser());
-		
+	catch(const std::exception& e) {
+		Logger::log(Logger::ERROR, "main.cpp", std::string(e.what()) + ", File: " + argv[1]);
 	}
 }
