@@ -7,7 +7,10 @@ CGI::CGI(const std::string& working_dir, const std::string& script_path, Request
 	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout), _interpreter(determine_interpreter()),_status_code(200) {
 		determine_interpreter();
 	}
-
+CGI::~CGI() {
+	if (_env && _env[0])
+		delete [] _env;
+}
 int CGI::get_status_code() {
 	return _status_code;
 }

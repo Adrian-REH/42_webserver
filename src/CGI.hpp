@@ -35,6 +35,7 @@ class CGI {
 		 * @param env Variables de entorno para la ejecución.
 		 */
 		CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env = NULL, size_t exec_timeout = 10);
+		~CGI();
 		/**
 		 * @brief Determina el intérprete adecuado para el script según su extensión.
 		 * 
