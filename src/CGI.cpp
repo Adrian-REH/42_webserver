@@ -90,10 +90,8 @@ std::string CGI::execute() {
 	if (pid == 0) {
 		try {
 			if (chdir(_working_dir.c_str()) == -1) {
-				close(cgi_response[0]);
-				close(cgi_response[1]);
-				close(cgi_io[0]);
-				close(cgi_io[1]);
+				closeFDs(cgi_response);
+				closeFDs(cgi_io);
 				exit(errno);
 			}
 
@@ -102,14 +100,12 @@ std::string CGI::execute() {
 				(char*)_script_path.c_str() , // Quito el primer caracter '/'
 				NULL
 			};
-			close(cgi_response[0]);
-			close(cgi_io[1]);
 			if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
-				(close(cgi_io[0]), exit(errno));
-			close(cgi_response[1]);
+				(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
 			if (dup2(cgi_io[0], STDIN_FILENO) < 0)
-				(close(cgi_io[0]), exit(errno));
-			close(cgi_io[0]);
+				(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+			closeFDs(cgi_response);
+			closeFDs(cgi_io);
 			execve(_interpreter.c_str(), argv, _env);
 			exit(errno);
 		} catch (const std::exception&  ) {
