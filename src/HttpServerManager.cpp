@@ -15,7 +15,7 @@ int HttpServerManager::start() {
 	size_t max_clients_srv = (1024 / srvs_conf.size());
 	struct epoll_event ev;
 
-	_epoll_fd = epoll_create1(0);
+	_epoll_fd = epoll_create(1);
 	if (_epoll_fd == -1) {
 		Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Error al crear epoll");
 		std::vector<int>::iterator it;
