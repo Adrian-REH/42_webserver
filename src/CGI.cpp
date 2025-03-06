@@ -90,7 +90,7 @@ std::string CGI::execute() {
 	if (pid == 0) {
 		try {
 			if (chdir(_working_dir.c_str()) == -1) {
-				exit(errno);// failure exit from CHILD PROCESS
+				exit(errno);
 			}
 
 			char* argv[] = {
@@ -105,6 +105,7 @@ std::string CGI::execute() {
 			close(cgi_response[1]);
 			if (dup2(cgi_io[0], STDIN_FILENO) < 0)
 				(close(cgi_io[0]), exit(errno));
+			close(cgi_io[0]);
 			execve(_interpreter.c_str(), argv, _env);
 			exit(errno);
 		} catch (const std::exception&  ) {
