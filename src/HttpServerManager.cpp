@@ -68,6 +68,7 @@ void HttpServerManager::stop() {
 	close(_epoll_fd);
 
 	for (it_clifd_srv = _sock_srvs.begin(); it_clifd_srv != _sock_srvs.end(); it_clifd_srv++) {
+		close(it_clifd_srv->second->getSocketFd());
 		it_clifd_srv->second->deleteClients();
 		delete it_clifd_srv->second;
 	}
@@ -218,24 +219,7 @@ int HttpServerManager::create_socket_fd(int port) {
 	return socket_fd;
 }
 //TODO: No hay limites de clientes????, no se le rechaza la conexion!!!!
-/* bool HttpServerManager::accept_connections(Server& srv) {
-	struct sockaddr_in client_address;
-	struct epoll_event ev;
-	socklen_t client_len = sizeof(client_address);
-	int client_fd = accept(srv.getSocketFd(), (struct sockaddr *)&client_address, &client_len);
-	if (client_fd == -1) {
-		Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Error al aceptar la conexión");
-		return 0;
-	}
-	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
-	ev.events = EPOLLIN | EPOLLET;
-	ev.data.fd = client_fd;
-	epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
-
-	_cli_srvs[client_fd] = srv.addClient(Client(client_fd));
-	return 1;
-} */
 
 int HttpServerManager::set_event_action(int client_fd, uint32_t action)
 {
