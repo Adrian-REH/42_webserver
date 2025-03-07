@@ -8,9 +8,9 @@ from auth import verify_session
 
 def list_files():
     real = os.path.abspath(__file__)
-    dir_path = os.path.dirname(real)
+    root_dir = os.path.join(os.path.dirname(real), "..")
+    path_f = os.path.join(root_dir, "files")
     
-    path_f = os.path.join(dir_path, "files")
     file_names = [f for f in os.listdir(path_f) if os.path.isfile(os.path.join(path_f, f))]
     for filename in file_names:
         print(f"""
@@ -99,7 +99,7 @@ def home():
                 padding: 10px 20px;
                 border: none;
                 cursor: pointer;
-                border-radius: 5px;
+                border-radius: 5px;home
                 font-size: 16px;
                 display: inline-block;
             }

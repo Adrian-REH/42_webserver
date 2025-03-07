@@ -27,7 +27,6 @@ std::vector<std::string> get_all_dirs(const char *dir_path) {
 			if (entry->d_type == DT_DIR){
 				dirname += "/";
 			}
-			std::cout << dirname << std::endl;
 			dirs.push_back(dirname);
 		}
 	}

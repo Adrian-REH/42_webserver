@@ -42,7 +42,6 @@ LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &i
 
 	for (++it; it != end; ++it) { //Busco propiedades para los methods
 		std::string line = *it;
-		std::cout << line << std::endl;
 		if (line.find("}") != std::string::npos) { // Fin de limit_except
 			break;
 		}
@@ -72,7 +71,6 @@ Location ParserConfig::parserLocation(std::deque<std::string>::iterator &it, std
 	loc.set_path(extractStrBetween(*it, "location ", " {"));
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
-		std::cout << line << std::endl;
 		if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
 			LimitExcept limExp = parserLimitExcept(it, end);
 			loc.set_limit_except(limExp);
@@ -104,7 +102,6 @@ ServerConfig ParserConfig::parserServerConfig(std::deque<std::string>::iterator 
 
 	for (++it; it != end; ++it) {
 		std::string line = (*it);
-		std::cout << line << std::endl;
 		if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
 			Location loc = parserLocation(it, end);
 			srv.add_location(loc);
@@ -155,7 +152,6 @@ void ParserConfig::execute(char **env) {
 		throw std::runtime_error("Error not config");
 	for (_it = _content_file.begin(); _it != _content_file.end(); ++_it) {
 		std::string line = (*_it);
-		std::cout << line << std::endl;
 		if (line.find("server ") != std::string::npos && line.find("{") != std::string::npos) {
 			conf.addServerConf(parserServerConfig(_it, _content_file.end()));
 		}

@@ -13,30 +13,6 @@ def fbuffer(f, chunk_size=10000):
 		if not chunk: break
 		yield chunk
 
-def handle_request_file(fileitem):
-	# strip leading path from file name
-	# to avoid directory traversal attacks
-	filename = os.path.basename(fileitem.filename)
-	print(f"<b> {filename}</b>")
-	
-	real = os.path.abspath(__file__)
-	dir_path = os.path.dirname(real)
-	
-
-	path_f = os.path.join(dir_path, "files", filename)
-	try:
-		f = open(path_f, 'wb', 10000)
-	except IOError as exc:
-		""" tb = sys.exc_info()[-1]
-		lineno = tb.tb_lineno
-		filename = tb.tb_frame.f_code.co_filename """
-		print('<b>{} <b>.'.format(exc.strerror))
-		sys.exit(exc.errno)
-	for chunk in fbuffer(fileitem.file):
-		f.write(chunk)
-	f.close()
-	message = 'The file "' + filename + '" was uploaded successfully'
-
 def main():
 	session_id = verify_session()
 	if not session_id:
@@ -59,9 +35,8 @@ def main():
 		print(f"<b> {filename}</b>")
 		
 		real = os.path.abspath(__file__)
-		dir_path = os.path.dirname(real)
-		
-		path_f = os.path.join(dir_path, "files", filename)
+		root_dir = os.path.join(os.path.dirname(real), "..")
+		path_f = os.path.join(root_dir, "files", filename)
 		try:
 			f = open(path_f, 'wb', 10000)
 		except IOError as exc:

@@ -35,9 +35,9 @@ def main():
 		print("<h1>Error: Sesion invalida</h1>")
 		sys.exit(errno.EACCES)  # Error: permisos denegados
 	real = os.path.abspath(__file__)
-	dir_path = os.path.dirname(real)
+	root_dir = os.path.join(os.path.dirname(real), "..")
 	filename = parser_body()
-	path_f = os.path.join(dir_path, "files", filename)
+	path_f = os.path.join(root_dir, "files", filename)
 	try:
 		os.remove(path_f)
 	except FileNotFoundError:

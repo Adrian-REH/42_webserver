@@ -13,7 +13,7 @@
 NAME = webserv
 CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -D LOG_LEVEL=3 -std=c++98 -g3 
-COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
+#COVFLAGS = -g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = -I.  -Iutils
 SRCS = main.cpp Server.cpp ServerConfig.cpp HttpServerManager.cpp Location.cpp \
 		CGI.cpp Request.cpp Client.cpp LimitExcept.cpp Logger.cpp Cookie.cpp\
@@ -29,14 +29,14 @@ OBJS = ${SRCS:.cpp=.o}
 
 # Compilar el ejecutable
 $(NAME): $(OBJS) 
-			$(CXX) $(CXXFLAGS) -o $(NAME) $(COVFLAGS) $(INCLUDE) $(OBJS) 
+			$(CXX) $(CXXFLAGS) -o $(NAME) $(INCLUDE) $(OBJS) 
 			
 all: $(NAME)
 
 
 # Regla para compilar los archivos .o
 %.o:%.cpp $(INCLUDE)
-		$(CXX) $(CXXFLAGS) $(COVFLAGS)  -c $< -o $@
+		$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Limpiar los archivos generados
 clean:

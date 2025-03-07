@@ -26,7 +26,6 @@ Cookie SessionCookieManager::setCookieBySessionId(const std::string& session_id,
 	cookie.set_value(session_id);
 	cookie.set_expiration(expirationTime);
 	_cookies[session_id] = cookie;
-	std::cout << cookie.get_value() << std::endl;
 	return cookie;
 }
 

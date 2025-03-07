@@ -71,7 +71,7 @@ int Client::handle_request(ServerConfig srv_conf) {
 		//_request.set_state(0);
 		while (true) {
 			bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
-			//std::cout << "bytes_received " << bytes_received << std::endl; 
+			Logger::log(Logger::INFO, "Client.cpp", "Bytes received: " + to_string(bytes_received));
 			if (bytes_received > 0) {
 				Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
 				request_data.append(buffer, bytes_received);
@@ -79,12 +79,11 @@ int Client::handle_request(ServerConfig srv_conf) {
 			} else if (bytes_received == 0 ) {
 				if (!request_data.empty())
 					break;
-				// Cliente desconectado
+				// Client disconected
 				Logger::log(Logger::WARN, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
 				return -1;
 			}
 			else {
-				std::cerr << to_string(errno) << " " <<strerror(errno) << std::endl;
 				if (!request_data.empty())
 					break;
 				Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
@@ -251,16 +250,18 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			}
 			throw HttpException::ForbiddenException();
 		}
-		if (loc.get_auto_index()) {
-			//TODO en caso de  ser un file sin extencion como hago para que se descargue?
-			//TODO: Agregar timeout
-			//std::cout << script_path << std::endl;
-			
+		if (loc.get_auto_index()) { // Get a file if it was below a autoindex dir
 			if (script_path[0] == '/')
 				script_path.erase(0, 1);
-			rs_start_line.append("Content-Type: application/octet-stream\r\n");
-			size_t dot_pos = script_path.rfind('/');
-			rs_start_line.append("Content-Disposition: attachment; filename=\"" + script_path.substr(dot_pos) + "\"\r\n");
+			std::string extension = ".bin";
+			if (script_path.rfind(".") != std::string::npos)
+				extension = script_path.substr(script_path.rfind("."));
+			rs_start_line.append("Content-Type: " + Config::getInstance().getMimeTypeByExtension(extension) +" \r\n");
+			if (loc.is_download()) {
+				size_t dot_pos = script_path.rfind('/');
+				rs_start_line.append("Content-Disposition: attachment; filename=\"" + script_path.substr(dot_pos) + "\"\r\n\r\n");
+			} else
+				rs_start_line.append("\r\n");
 			rs = readFileNameToStr(script_path.c_str());
 			rs_start_line.append(rs);
 			send_response(rs_start_line);
