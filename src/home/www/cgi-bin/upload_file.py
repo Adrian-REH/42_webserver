@@ -40,10 +40,6 @@ def main():
 		try:
 			f = open(path_f, 'wb', 10000)
 		except IOError as exc:
-			""" tb = sys.exc_info()[-1]
-			lineno = tb.tb_lineno
-			filename = tb.tb_frame.f_code.co_filename """
-			print('<b>{} <b>.'.format(exc.strerror))
 			sys.exit(exc.errno)
 		for chunk in fbuffer(fileitem.file):
 			f.write(chunk)
@@ -109,4 +105,6 @@ def main():
 
 
 if __name__ == "__main__":
+	if os.environ.get("REQUEST_METHOD") != "POST":
+		sys.exit(92)
 	main()
