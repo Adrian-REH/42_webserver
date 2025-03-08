@@ -136,7 +136,7 @@ void HttpServerManager::handle_epoll()
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "New incoming connection detected by server host:port " + it_srv->second->get_server_name() + ":"+ to_string(it_srv->second->getPort()));
 				try {
 					std::pair<Server*, int > srv_clifd = it_srv->second->accept_connections(_epoll_fd);
-					if (srv_clifd.second < 0) // No pudo aceptar la conexion
+					if (srv_clifd.second < 0) // Couldnt accept connection
 						continue ;
 					_cli_srvs[srv_clifd.second] = srv_clifd.first;
 					Logger::log(Logger::INFO,"HttpServerManager.cpp", "Connection accepted successfully: new client_fd: " + to_string(srv_clifd.second));
@@ -148,7 +148,7 @@ void HttpServerManager::handle_epoll()
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Failed event");
 				deleteClient(it_cli->first);
 			}
-			else if (it_cli != _cli_srvs.end() &&  (events[i].events & EPOLLOUT) )//&& events[i].data.fd != server_fd)
+			else if (it_cli != _cli_srvs.end() &&  (events[i].events & EPOLLOUT))
 			{
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling output client with FD: " + to_string(events[i].data.fd));
 				if (it_cli->second->handle_output_client(it_cli->first) < 0){
@@ -163,7 +163,7 @@ void HttpServerManager::handle_epoll()
 				}
 				deleteClient(it_cli->first);
 			}
-			else if (it_cli != _cli_srvs.end() && (events[i].events & EPOLLIN))// && events[i].data.fd != server_fd)
+			else if (it_cli != _cli_srvs.end() && (events[i].events & EPOLLIN))
 			{
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client_fd: " + to_string(events[i].data.fd));
 				int result = it_cli->second->handle_input_client(it_cli->first);
@@ -220,8 +220,6 @@ int HttpServerManager::create_socket_fd(int port) {
 	Logger::log(Logger::DEBUG,"HttpServerManager.cpp", "Max-Clients: " + to_string(MAX_CLIENTS) + ", socket_fd: " + to_string(socket_fd));
 	return socket_fd;
 }
-//TODO: No hay limites de clientes????, no se le rechaza la conexion!!!!
-
 
 int HttpServerManager::set_event_action(int client_fd, uint32_t action)
 {

@@ -8,12 +8,12 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-#include <ctime>  // Para time_t
+#include <ctime> 
 #include <string>
 #include <unistd.h>
 #include <vector>
 #include <set>
-#include <dirent.h> // Para opendir, readdir, closedir
+#include <dirent.h>
 
 bool						ends_with(const std::string& str, const std::string& suffix);
 std::string					extractStrBetween(const std::string& line, const std::string& init, const std::string& end);
@@ -35,5 +35,5 @@ unsigned long				to_dec_ulong(std::string value);
 std::string					generate_index_html(std::vector<std::string> files, std::string dir_path);
 std::string					readFileNameToStr(const char *_filename);
 void						closeFDs(int fds[]);
-//std::string ul_to_string(size_t value);
+
 #endif

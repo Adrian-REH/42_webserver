@@ -12,7 +12,6 @@ class HttpServerManager {
 		int _epoll_fd;
 		int _max_events;
 
-		//bool accept_connections(Server& srv);
 		int set_event_action(int client_fd, uint32_t action);
 		void handle_epoll();
 		int create_socket_fd(int port);
