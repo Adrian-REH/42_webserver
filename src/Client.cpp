@@ -70,7 +70,7 @@ int Client::handle_request(ServerConfig srv_conf) {
 
 		while (true) {
 			bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
-			Logger::log(Logger::INFO, "Client.cpp", "Bytes received: " + to_string(bytes_received));
+			//Logger::log(Logger::DEBUG, "Client.cpp", "Bytes received: " + to_string(bytes_received));
 			if (bytes_received > 0) {
 				Logger::log(Logger::INFO, "Client.cpp", "Parsing Request.");
 				request_data.append(buffer, bytes_received);
@@ -122,8 +122,7 @@ int Client::handle_request(ServerConfig srv_conf) {
 std::string resolve_html_path(std::string path) {
 	std::string rs;
 	if (path[0] == '/')
-		path.erase(0,1);
-
+		path.erase(0,1);	
 	Logger::log(Logger::INFO,"Client.cpp", "resolve_html_path: " + path);
 	rs = "Content-Type: text/html\r\n\r\n";
 	if (access(path.c_str(), F_OK) < 0)
@@ -219,10 +218,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	std::string rs_start_line = create_start_line(httpStatus.getStatusByCode(200));
 	std::string path = _request.get_path();
 	std::vector<std::string> files;
-	Location loc = srv_conf.findMatchingLocation(path);
 	std::string method = _request.get_method();
-	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
-
+	
 	if (has_error()) {
 		rs_start_line = create_start_line(_error);
 		std::string path_error = srv_conf.get_error_page_by_code(_error.first);
@@ -231,6 +228,9 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		send_response(rs_start_line);
 		return 0;
 	}
+
+	Location loc = srv_conf.findMatchingLocation(path);
+	Logger::log(Logger::DEBUG, "Client.cpp", "Location found: "+ loc.get_path());
 	try {
 		if (!loc.get_limit_except().isMethodAllowed(_request.get_method()))
 			throw HttpException::NotAllowedMethodException();
