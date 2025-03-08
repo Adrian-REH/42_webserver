@@ -29,7 +29,7 @@ std::string CGI::determine_interpreter() const {
 	if (ends_with(_script_path, ".py")) {
 		return "/usr/bin/python3";
 	} else if (ends_with(_script_path, ".php")) {
-		return "/usr/bin/php-cgi";
+		return "/usr/bin/php";
 	} else if (ends_with(_script_path, ".js")) {
 		return "/usr/bin/node";
 	} else {
@@ -102,8 +102,7 @@ std::string CGI::execute() {
 		}
 		char* argv[] = {
 			(char*)_interpreter.c_str(),
-			(char*)((_script_path.rfind(".php") !=  std::string::npos) ?"-f" : ""),
-			(char*)("/mnt/c/Users/Usuario/Desktop/Proyectos/c/42_webserver/src/home/www/cgi-bin"+_script_path).c_str(),
+			(char*)_script_path.c_str(),
 			NULL
 		};
 		std::cout << argv[0]<< std::endl;
