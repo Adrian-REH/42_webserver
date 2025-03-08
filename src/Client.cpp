@@ -245,8 +245,9 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				send_response(rs_start_line);
 				return 0;
 			}
-			throw HttpException::ForbiddenException();
+			throw HttpException::NotFoundException();
 		}
+		Logger::log(Logger::DEBUG, "Client.cpp", "Found script path: "+ script_path);
 		if (loc.get_auto_index()) { // Get a file if it was below a autoindex dir
 			if (script_path[0] == '/')
 				script_path.erase(0, 1);

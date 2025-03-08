@@ -112,7 +112,7 @@ def test_cookie_session_delete_file():
             'Cookie': f'session={session_cookie}; session_id={session_id_cookie}',
         }
         data = {'fileId':filename}
-        response = requests.delete(BASE_URL + "cgi-bin/delete_file.py", json=data, headers=headers)
+        response = requests.delete(BASE_URL + "cgi-bin/delete_file.js", json=data, headers=headers)
         assert response.status_code == 200
         assert "Archivo eliminado correctamente" in response.text
 

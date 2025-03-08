@@ -1,7 +1,6 @@
 # login.py
 import cgi
 import http.cookies
-from login_form import loginForm
 import os
 from auth import verify_session
 from home import home

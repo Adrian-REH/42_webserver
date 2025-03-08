@@ -197,7 +197,7 @@ def home():
     </body>
     <script>
         function deleteFile(fileName) {
-            fetch('http://localhost:8080/cgi-bin/delete_file.py', {
+            fetch('http://localhost:8080/cgi-bin/delete_file.js', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
