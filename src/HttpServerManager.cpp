@@ -64,6 +64,7 @@ void HttpServerManager::stop() {
 	}
 	for (it_clifd_srv = _cli_srvs.begin(); it_clifd_srv != _cli_srvs.end(); it_clifd_srv++) {
 		it_clifd_srv->second->deleteClients();
+		close(it_clifd_srv->first);
 	}
 	_cli_srvs.clear();
 	close(_epoll_fd);
@@ -93,11 +94,11 @@ int HttpServerManager::manageIdleClients(struct epoll_event *events, int nfds) {
 	for (int i = 0; i < nfds; i++) {
 		it_event = _cli_srvs.find(events[i].data.fd);
 		if (it_event != _cli_srvs.end() && it_event->second->hasClientTimedOut(it_event->first)) {
+			Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(it_event->first)+" timed out");
 				deleteClient(it_event->first);
 				events[i].data.fd = 0;
 				events[i].events = 0;
 				nfds--;
-				Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(it_event->first)+" timed out");
 		}
 	}
 	for (it = _cli_srvs.begin(); it != _cli_srvs.end(); ) {

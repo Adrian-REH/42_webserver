@@ -173,7 +173,7 @@ def home():
         <div class="container">
             <h1>Upload a file </h1>
             
-            <form enctype="multipart/form-data" action="/cgi-bin/upload_file.py" method = "post" >
+            <form enctype="multipart/form-data" action="/upload_file.php" method = "post" >
                 <input type="file" id="myFile" name="file">
                 <p>
                     <button type="button" class="custom-file-button" onclick="document.getElementById('myFile').click();">
@@ -197,7 +197,7 @@ def home():
     </body>
     <script>
         function deleteFile(fileName) {
-            fetch('http://localhost:8080/cgi-bin/delete_file.py', {
+            fetch('http://localhost:8080/delete_file.py', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -283,7 +283,7 @@ def verify_home():
         </head>
         <body>
             <div class="container">
-                <a class="button" href="/cgi-bin/login.py" >Volver a login</a>
+                <a class="button" href="/login.py" >Volver a login</a>
             </div>
         </body>
         </html>""")

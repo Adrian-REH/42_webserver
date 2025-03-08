@@ -29,7 +29,7 @@ std::string CGI::determine_interpreter() const {
 	if (ends_with(_script_path, ".py")) {
 		return "/usr/bin/python3";
 	} else if (ends_with(_script_path, ".php")) {
-		return "/usr/bin/php";
+		return "/usr/bin/php-cgi";
 	} else if (ends_with(_script_path, ".js")) {
 		return "/usr/bin/node";
 	} else {
@@ -40,6 +40,7 @@ std::string CGI::determine_interpreter() const {
 int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	std::vector<std::string> env_strings;
 	env_strings.push_back(std::string(http_cookie));
+	env_strings.push_back("REDIRECT_STATUS=200" );
 	env_strings.push_back("REQUEST_METHOD=" + req.get_method());
 	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
 	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("Content-Length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
@@ -99,13 +100,15 @@ std::string CGI::execute() {
 			closeFDs(cgi_io);
 			exit(errno);
 		}
-
 		char* argv[] = {
 			(char*)_interpreter.c_str(),
-			(char*)_script_path.c_str(),
+			(char*)((_script_path.rfind(".php") !=  std::string::npos) ?"-f" : ""),
+			(char*)("/mnt/c/Users/Usuario/Desktop/Proyectos/c/42_webserver/src/home/www/cgi-bin"+_script_path).c_str(),
 			NULL
 		};
-
+		std::cout << argv[0]<< std::endl;
+		std::cout << argv[1]<< std::endl;
+		std::cout << argv[2]<< std::endl;
 		if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
 			(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
 		if (dup2(cgi_io[0], STDIN_FILENO) < 0)

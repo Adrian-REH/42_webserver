@@ -296,6 +296,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				CGI cgi(root_dir, script_path, _request);
 				cgi.resolve_cgi_env(_request, http_cookie);
 				rs = cgi.execute();
+
 				update_cookie_from_response(rs, cookie);
 				//RESPONSE
 				rs_start_line = create_start_line(httpStatus.getStatusByCode(cgi.get_status_code()));
@@ -305,6 +306,14 @@ int Client::handle_response(ServerConfig  srv_conf) {
 						rs_start_line = create_start_line(httpStatus.getStatusByCode(204));
 					else
 						rs = resolve_html_path(srv_conf.get_error_page_by_code(cgi.get_status_code()));
+				} else {
+					std::size_t body_start = rs.find("\r\n\r\n");
+					if (body_start != std::string::npos)
+					{
+						body_start +=4;
+						std::string body = rs.substr(body_start);
+						rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+					}
 				}
 				rs_start_line.append(rs);
 				send_response(rs_start_line);

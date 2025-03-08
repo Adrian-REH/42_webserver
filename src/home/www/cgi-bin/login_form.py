@@ -119,7 +119,7 @@ def loginForm():
 	<body>
 		<div class="container">
 			<h1>Login Form</h1>
-			<form method="post" action="/cgi-bin/login.py">
+			<form method="post" action="/login.py">
 				<label for="username">Username:</label>
 				<input type="text" id="username" name="username" value="{username}">
 				
