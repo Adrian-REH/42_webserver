@@ -20,7 +20,11 @@ def main():
 		print("Content-Type: text/html\r\n")
 		print("<h1>Error: Sesion invalida</h1>")
 		return
+	
 	form = cgi.FieldStorage()
+	
+	if "file" not in form:
+		sys.exit(2)
 	
 	print("Content-Type: text/html\r\n")
 	print("")
