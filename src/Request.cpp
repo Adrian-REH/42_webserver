@@ -65,7 +65,7 @@ void Request::parse_headers(const std::string& headers_section) {
  * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
  */
 void Request::parse_body(const std::string& body_section, size_t content_length) {
-	if (content_length >_location.get_client_max_body_size() || body_section.size() > content_length){
+	if (content_length > _location.get_client_max_body_size() || body_section.size() > content_length){
 		throw HttpException::RequestEntityTooLargeException();
 	} else if (body_section.size() == content_length) {
 		_state = DONE;
