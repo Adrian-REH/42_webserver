@@ -22,7 +22,7 @@ Config::Config() {
     _mimetypes[".gz"] = "application/gzip";
     _mimetypes[".tar"] = "application/x-tar";
     _mimetypes[".bz2"] = "application/x-bzip2";
-    _mimetypes[".bin"] = "application/octet-stream"; // Tipo MIME para archivos binarios
+    _mimetypes[".bin"] = "application/octet-stream"; // Type MIME for binary files
     _mimetypes[".exe"] = "application/octet-stream";
     _mimetypes[".dll"] = "application/octet-stream";
     _mimetypes[".iso"] = "application/x-iso9660-image";

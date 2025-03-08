@@ -71,10 +71,10 @@ void Server::deleteClients() {
 }
 
 std::pair<std::string, std::string> client_info(struct sockaddr_in client_address) {
-	char client_ip[INET_ADDRSTRLEN];  // Buffer para la IP
+	char client_ip[INET_ADDRSTRLEN];  // Buffer for the IP
 	inet_ntop(AF_INET, &client_address.sin_addr, client_ip, INET_ADDRSTRLEN);
 
-	int client_port = ntohs(client_address.sin_port); // Convertir a formato legible
+	int client_port = ntohs(client_address.sin_port); // Converts to a legible format
 
 	std::string ip(client_ip);
 	return std::make_pair(ip, to_string(client_port));
@@ -86,16 +86,16 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	socklen_t client_len = sizeof(client_address);
 	int client_fd = accept(_socket_fd, (struct sockaddr *)&client_address, &client_len);
 	if (client_fd == -1) {
-		Logger::log(Logger::WARN, "Server.cpp", "Error al aceptar la conexion");
+		Logger::log(Logger::WARN, "Server.cpp", "Error accepting conection");
 		return std::make_pair(this, -1);
 	}
 	std::pair<std::string, std::string> data_cli = client_info(client_address);
 	size_t n_clients = _clients.size();
 	if (n_clients >= _max_clients) {
-		Logger::log(Logger::ERROR, "Server.cpp", "¡Servidor Lleno!, n_clients: " + to_string(n_clients) + ", max_clients: " + to_string(_max_clients));
+		Logger::log(Logger::ERROR, "Server.cpp", "Server is full!, n_clients: " + to_string(n_clients) + ", max_clients: " + to_string(_max_clients));
 		Logger::log(Logger::DEBUG, "Server.cpp", "The client was rejected: IP: " + data_cli.first + "Port + " + data_cli.second );
 		if (client_fd != -1) {
-			// Enviar la respuesta nRetry-After 5 seg
+			// Sends response Retry-After 5 seg
 			send(client_fd, "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 5\r\n\r\n", 56, 0);
 			close(client_fd);
 		}

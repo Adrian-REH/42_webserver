@@ -79,13 +79,13 @@ int Client::handle_request(ServerConfig srv_conf) {
 				if (!request_data.empty())
 					break;
 				// Client disconected
-				Logger::log(Logger::WARN, "Client.cpp", "Cliente desconectado, socket fd" + to_string(_socket_fd));
+				Logger::log(Logger::WARN, "Client.cpp", "Client disconnected, socket fd" + to_string(_socket_fd));
 				return -1;
 			}
 			else {
 				if (!request_data.empty())
 					break;
-				Logger::log(Logger::ERROR, "Client.cpp", "Error en lectura de socket fd" + to_string(_socket_fd));
+				Logger::log(Logger::ERROR, "Client.cpp", "Error reading from socket fd" + to_string(_socket_fd));
 				return -1;
 			}
 		}

@@ -58,7 +58,6 @@ ServerConfig &ServerConfig::add_location(const Location &location) {
 }
 ServerConfig &ServerConfig::set_error_page(const int code, std::string path) {
 	std::map<int, std::string>::iterator it = _error_pages.find(code);
-	//TODO: Debo verificar si hay un archivo en ese path y si no hay lanzo un error
 	if (it != _error_pages.end())
 		_error_pages[code] = path;
 	return *this;
@@ -72,10 +71,8 @@ int countOccurrences(const std::string& str, const std::string& sub) {
 	int count = 0;
 	size_t pos = 0;
 
-	// Usamos find para buscar subcadenas
 	if ((pos = str.find(sub, pos)) != std::string::npos) {
-		count += sub.length();  // Encontró una coincidencia
-		//pos += sub.length();  // Avanza la posición para buscar la siguiente coincidencia
+		count += sub.length();  
 	}
 
 	return count;

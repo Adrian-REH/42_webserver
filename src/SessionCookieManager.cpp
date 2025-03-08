@@ -54,7 +54,7 @@ bool SessionCookieManager::isCookieExpiredBySessionId(const std::string& session
 	if (_cookies.find(session_id) != _cookies.end()) {
 		return isExpired(_cookies[session_id]);
 	}
-	return true;  // Si no existe, consideramos que está "expirada"
+	return true;  // If it doesnt exist, it is considered "expired"
 }
 
 void SessionCookieManager::removeExpiredCookies() {
