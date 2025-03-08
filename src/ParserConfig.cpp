@@ -5,7 +5,7 @@ const char* is_file_conf(const char *str) {
 	std::string filename(str);
 	if (ends_with(filename, ".conf"))
 		return str;
-	throw std::runtime_error("Error de parseo: El archivo no finaliza con .conf");
+	throw std::runtime_error("Parsing error: Invalid file extension, only '.conf' is valid.");
 }
 
 ParserConfig::ParserConfig(const char *file_name): _file_name(file_name), _content_file(readFileName(is_file_conf(_file_name))) {}
@@ -29,8 +29,8 @@ void ParserConfig::init_automata() {
 
 LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &it, std::deque<std::string>::iterator end) {
 	LimitExcept limExc;
-	size_t lmtPos = it->find("limit_except ") + 13; // Salta "limit_except " (13 caracteres)
-	size_t bracketPos = it->find("{", lmtPos); // Encuentra el '}' después de "limit_except "
+	size_t lmtPos = it->find("limit_except ") + 13; // Jumps "limit_except " (13 chars)
+	size_t bracketPos = it->find("{", lmtPos); // Finds '}' after "limit_except "
 	std::map<std::string, Setter<LimitExcept> >::iterator aut_it;
 	std::string strmethods = it->substr(lmtPos, bracketPos - lmtPos);
 	std::deque<std::string> methods = split(strmethods, ' ');
@@ -40,16 +40,16 @@ LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &i
 	for (its = methods.begin(); its != methods.end(); its++)
 		limExc.addAllowedMethod(*its);
 
-	for (++it; it != end; ++it) { //Busco propiedades para los methods
+	for (++it; it != end; ++it) { //Finds properties for the methods
 		std::string line = *it;
-		if (line.find("}") != std::string::npos) { // Fin de limit_except
+		if (line.find("}") != std::string::npos) { // End of limit_except
 			break;
 		}
 		else {
 			for (aut_it = _automata_limexc.begin(); aut_it != _automata_limexc.end(); aut_it++){
 				if (line.find(aut_it->first) != std::string::npos){
 					if (aut_it != _automata_limexc.end()) {
-						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Missing ';'");
 						std::string val = extractStrBetween(line, aut_it->first, ";");
 						aut_it->second.execute(limExc, val);
 					}
@@ -58,10 +58,6 @@ LimitExcept ParserConfig::parserLimitExcept(std::deque<std::string>::iterator &i
 			}
 		}
 	}
-	/**TODO: Errores
-	 * 	 LimitException Vacio -> limit_except GET {}
-	 */
-	//TODO: SI no hay ciertos datos para LimitExcept que lance un error
 	return limExc;
 }
 
@@ -74,25 +70,24 @@ Location ParserConfig::parserLocation(std::deque<std::string>::iterator &it, std
 		if (line.find("limit_except") != std::string::npos && line.find("{") != std::string::npos) {
 			LimitExcept limExp = parserLimitExcept(it, end);
 			loc.set_limit_except(limExp);
-		} else if (line.find("}") != std::string::npos) { // Fin de location
+		} else if (line.find("}") != std::string::npos) { // End of Location
 			return loc;
 		} else {
 
 			for (aut_it = _automata_loc.begin(); aut_it != _automata_loc.end(); aut_it++){
 				if (line.find(aut_it->first) != std::string::npos){
 					if (aut_it != _automata_loc.end()) {
-						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Missing ';'");
 						std::string val = extractStrBetween(line, aut_it->first, ";");
 						aut_it->second.execute(loc, val);
 					}
 					break;
 				}
 			}
-			//TODO: Tratar los permisos de path_upload_directory
 		}
 	}
 	if (loc.get_path().empty())
-		throw std::runtime_error("Error en la configuracion de Location");
+		throw std::runtime_error("Error on Location configuration");
 	return loc;
 }
 
@@ -105,13 +100,13 @@ ServerConfig ParserConfig::parserServerConfig(std::deque<std::string>::iterator 
 		if (line.find("location") != std::string::npos && line.find("{") != std::string::npos) {
 			Location loc = parserLocation(it, end);
 			srv.add_location(loc);
-		} else if (line.find("}") != std::string::npos) { // Fin de server
+		} else if (line.find("}") != std::string::npos) { // End of server
 			return srv;
 		} else {
 			for (aut_it = _automata_srv.begin(); aut_it!= _automata_srv.end(); aut_it++) {
 				if (line.find(aut_it->first) != std::string::npos) {
 					if (aut_it != _automata_srv.end()) {
-						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Falta ';'");
+						if (line.find(";") == std::string::npos) throw std::runtime_error("Error: Missing ';'");
 						std::string val = extractStrBetween(line, aut_it->first, ";");
 						aut_it->second.execute(srv, val);
 					}
@@ -123,7 +118,7 @@ ServerConfig ParserConfig::parserServerConfig(std::deque<std::string>::iterator 
 	}
 	std::map<std::string, Location> locs = srv.get_locations();
 	if (srv.get_port() ==0  || srv.get_server_name().empty() || locs.empty())
-		throw std::runtime_error("Error en la configuracion de Srv");
+		throw std::runtime_error("Error on Srv configuration");
 	return srv;
 
 }
@@ -141,13 +136,12 @@ int ParserConfig::dumpRawData(const char *file_name)
 }
 
 /**
- * @brief Itero sobre _content_file y parseando el contenido a configuracion del server
- * Cliente o LimitException, para el funcionamiento del programa
+ * @brief Iters _content_file and parses the content of the config server
+ * Cliente or LimitException, for the program executiong
  */
-void ParserConfig::execute(char **env) {
+void ParserConfig::execute() {
 	Config &conf = Config::getInstance();
 	init_automata();
-	(void)env; // FIXME: Se precisa el env para cada ejecucion de CGI?, o es posible hacerlo sin utilizar el ENV que se envie, de igual forma se puede utilizar 
 	if (_content_file.size() <= 0)
 		throw std::runtime_error("Error not config");
 	for (_it = _content_file.begin(); _it != _content_file.end(); ++_it) {
@@ -157,9 +151,6 @@ void ParserConfig::execute(char **env) {
 		}
 	}
 }
-/* Add allowed methods and search through them to get if its permitted
-*/
-
 
 std::string ParserConfig::get_last_lane_parser() {
 	std::deque<std::string>::iterator it_content;

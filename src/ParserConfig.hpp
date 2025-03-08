@@ -5,7 +5,6 @@
 #include "utils/Utils.hpp"
 #include <algorithm>
 #include <set>
-#include <cstdlib>  // Para strtol y strtoul
 #include "Config.hpp"
 
 template <typename T, class Class>
@@ -22,11 +21,11 @@ struct SetterStorage {
 };
 
 
-// Estructura que almacena un puntero a función miembro genérico
+// Structure stores a pointer to a generic member function
 template <typename Class>
 class Setter {
 	public:
-		// Plantilla de SetterType para obtener el tipo de la función
+		//  SetterType template to obtain the type of a function
 		template <typename T>
 		struct SetterType {
 			typedef void (Class::*Type)(T);
@@ -37,15 +36,17 @@ class Setter {
 
 		Setter() : type(INT) {}
 	
-		// Método para asignar un setter a una función miembro
+		// Method to assign a setter to a member function
 		void setSetter(Class& (Class::*method)(int), Type t) {
 			setter.intSetter = method;
 			type = t;
 		}
+
 		void setSetter(Class& (Class::*method)(size_t), Type t) {
 			setter.sizeTSetter = method;
 			type = t;
 		}
+
 		void setSetter(Class& (Class::*method)(const std::string &), Type t) {
 			setter.stringSetter = method;
 			type = t;
@@ -55,9 +56,8 @@ class Setter {
 			setter.mapIntStrSetter = method;
 			type = t;
 		}
-		// Método para ejecutar el setter
+		// Method executes the setter
 		void execute(Class &srv, std::string val) {
-			//srv.set_port(8080);
 			std::deque<std::string> args = split(val, ' ');
 
 			char *endp = NULL;
@@ -119,13 +119,13 @@ class ParserConfig {
 		
 	public:
 		void init_automata();
-		ParserConfig(const char *file_name);
+		ParserConfig(const char *file_name = "default.conf");
 		std::string get_last_lane_parser();
 		int dumpRawData(const char *file_name);
 		/**
-		 * @brief Busco en el archivo la configuracion necesaria para ServerConfig
+		 * @brief Searches in the file the configuration needed for ServerConfig
 		 */
-		void execute(char **env);
+		void execute();
 };
 
 #endif

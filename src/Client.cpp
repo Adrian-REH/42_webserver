@@ -68,7 +68,6 @@ int Client::handle_request(ServerConfig srv_conf) {
 		std::string request_data;
 		int bytes_received;
 
-		//_request.set_state(0);
 		while (true) {
 			bytes_received = recv(_socket_fd, buffer, sizeof(buffer) - 1, 0);
 			Logger::log(Logger::INFO, "Client.cpp", "Bytes received: " + to_string(bytes_received));
@@ -213,8 +212,6 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 }
 
 
-
-
 int Client::handle_response(ServerConfig  srv_conf) {
 	std::string script_path;
 	std::string rs;
@@ -240,7 +237,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		else if (!loc.get_redirect_url().empty())
 			throw HttpException::MovedPermanentlyRedirectionException();
 		if (loc.findScriptPath(path, script_path)) {
-			if (loc.get_auto_index()) { //TODO: ? Set a default file to answer if the request is a directory. EL DEfault directory siempre es donde esta ubicado Nginx
+			if (loc.get_auto_index()) {
 				files = loc.get_files();
 				Logger::log(Logger::INFO,"Client.cpp", "Generating index: " + script_path);
 				rs = generate_index_html(files, script_path);
