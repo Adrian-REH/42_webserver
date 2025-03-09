@@ -17,7 +17,7 @@
 	}
 
 	// Uso de la función
-	if (!verify_session()) {
+	if (verify_session()) {
 		echo "Content-Type: text/html\r\n\r\n";
 		echo "Invalid session";
 		exit(13);
