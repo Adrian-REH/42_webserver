@@ -95,6 +95,7 @@ void Request::receiving_headers()
 void Request::receiving_body(std::string body_section) {
 	_body += body_section;
 
+	
 	if (_method == "GET" || _method == "HEAD")
 	{
 		if (!_body.empty())
@@ -102,16 +103,20 @@ void Request::receiving_body(std::string body_section) {
 		_state = DONE;
 		return ;
 	}
-
-	if (_body.empty())
-		return ;
 	
-	if (is_chunked_request() && _state < DONE) {	
+	if (!_body.empty() && is_chunked_request() && _state < DONE) {	
 		read_chunked_body();
 	} else if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
 		size_t content_length = (size_t) to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
 		Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: DONE REQ");
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "POST" ){ // Handles error on POST and DELETE
+		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "DELETE"){
+		_state = DONE;
+		return;
+	} else if (_body.empty()){
+		return ;
 	} else {
 		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");
 	}
