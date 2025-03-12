@@ -106,7 +106,7 @@ void Request::receiving_body(std::string body_section) {
 	
 	if (!_body.empty() && is_chunked_request() && _state < DONE) {	
 		read_chunked_body();
-	} else if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
+	} else if ( _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
 		size_t content_length = (size_t) to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
 		Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: DONE REQ");
