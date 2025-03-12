@@ -168,6 +168,7 @@ void HttpServerManager::handle_epoll()
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling input client_fd: " + to_string(events[i].data.fd));
 				int result = it_cli->second->handle_input_client(it_cli->first);
 				Client* client = it_cli->second->get_client(it_cli->first);
+
 				if (result < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling input client with: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);

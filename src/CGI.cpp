@@ -1,6 +1,7 @@
 
 #include "CGI.hpp"
 #include "Request.hpp"
+#include "Server.hpp"
 
 
 CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
@@ -198,3 +199,4 @@ std::string CGI::execute() {
 		return (result);
 	}
 }
+

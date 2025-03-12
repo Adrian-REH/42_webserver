@@ -79,6 +79,21 @@ std::pair<std::string, std::string> client_info(struct sockaddr_in client_addres
 	std::string ip(client_ip);
 	return std::make_pair(ip, to_string(client_port));
 }
+std::pair<int, int> cgi_accept(int epoll_fd, int pipecgi, pid_t pid) {
+	struct sockaddr_in client_address;
+	struct epoll_event ev;
+	socklen_t client_len = sizeof(client_address);
+
+	fcntl(pipecgi, F_SETFL, O_NONBLOCK);
+	fcntl(pipecgi, F_SETFD, FD_CLOEXEC);
+	ev.events = EPOLLIN | EPOLLET;
+	ev.data.fd = pipecgi;
+	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipecgi, &ev);
+	_client_cgi[pipecgi] = pid;
+
+	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: IP:PORT " + data_cli.first + ":" + data_cli.second + " fd: " + to_string(client_fd));
+	return std::make_pair(0, client_fd);
+}
 
 std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	struct sockaddr_in client_address;
