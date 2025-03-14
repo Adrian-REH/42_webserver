@@ -27,6 +27,7 @@ class Client {
 		size_t _n_request;
 		Request _request;
 		std::pair<int, std::string> _error;
+		bool _close;
 		void handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line);
 		Cookie handle_cookie();
 		std::string prepare_cgi_data( const ServerConfig &srv_conf, Cookie cookie);
@@ -106,6 +107,8 @@ class Client {
 		size_t  has_client_timed_out();
 		bool  has_max_req(size_t n_req);
 		std::string get_port() const;
+		bool should_close() const;
+		void set_close(bool);
 		std::string get_ip() const;
 		Request get_request() const;
 

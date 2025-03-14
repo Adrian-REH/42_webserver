@@ -101,7 +101,7 @@ function getFilePath() {
 var session = verifySession();
 if (!session) {
 	console.log(`Set-Cookie: session=${session}`);
-	console.log("Content-Type: text/html\r\n");
+	console.log("Content-Type: text/html\r\n\r\n");
 	console.log("<h1>Error: Sesion invalida</h1>");
 	process.exit(13);
 };

@@ -17,7 +17,7 @@ def main():
 	session_id = verify_session()
 	if not session_id:
 		print(f"Set-Cookie: session={session_id}")
-		print("Content-Type: text/html\r\n")
+		print("Content-Type: text/html\r\n\r\n")
 		print("<h1>Error: Sesion invalida</h1>")
 		return
 	
@@ -26,8 +26,7 @@ def main():
 	if "file" not in form:
 		sys.exit(2)
 	
-	print("Content-Type: text/html\r\n")
-	print("")
+	print("Content-Type: text/html\r\n\r\n")
 	# A nested FieldStorage instance holds the file
 	fileitem = form['file']
 	

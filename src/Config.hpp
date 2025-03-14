@@ -22,7 +22,7 @@ class Config {
 		static Config &getInstance();
 		void addServerConf(ServerConfig);
 		std::map<int, ServerConfig> getServerConfs();
-		ServerConfig getServerConfByServerName(const int);
+		ServerConfig getServerConfByPort(const int);
 		std::string getMimeTypeByExtension(const std::string);
 
 	class ConfigNotFoundException : public std::exception {

@@ -21,7 +21,7 @@ def list_files():
         """)
 
 def home():
-    print("Content-type: text/html\n")
+    print("Content-type: text/html\r\n\r\n")
     print("""
     <!DOCTYPE html>
     <html lang="es">
@@ -237,7 +237,7 @@ def verify_home():
     mensaje_class = "info"
     if not verify_session():
         print(f"Set-Cookie: session=invalid;")
-        print("Content-Type: text/html\r\n")
+        print("Content-Type: text/html\r\n\r\n")
         print(f"""<!DOCTYPE html>
         <html lang="es">
         <head>

@@ -2,6 +2,17 @@
 #include "Logger.hpp"
 #include "Config.hpp"
 #include "HttpException.hpp"
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/signal.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+
+#define check(expr) if (!(expr)) { perror(#expr); kill(0, SIGTERM); }
 
 Server::Server(int port, size_t max_clients, std::string server_name) : _port(port), _max_clients(max_clients), _server_name(server_name), _clients() { //,_max_clients(max_clients), _env_len(0){
 }
@@ -79,7 +90,20 @@ std::pair<std::string, std::string> client_info(struct sockaddr_in client_addres
 	std::string ip(client_ip);
 	return std::make_pair(ip, to_string(client_port));
 }
+void Server::enable_keepalive(int sock) {
+	ServerConfig srv_conf = Config::getInstance().getServerConfByPort(_port);
+    int yes = srv_conf.get_timeout();
+    check(setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)) != -1);
 
+    int idle = 1;
+    check(setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int)) != -1);
+
+    int interval = 1;
+    check(setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(int)) != -1);
+
+    int maxpkt = srv_conf.get_max_req();
+    check(setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(int)) != -1);
+}
 std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	struct sockaddr_in client_address;
 	struct epoll_event ev;
@@ -103,6 +127,8 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	}
 	fcntl(client_fd, F_SETFL, O_NONBLOCK);
 	fcntl(client_fd, F_SETFD, FD_CLOEXEC);
+	enable_keepalive(client_fd);
+
 	ev.events = EPOLLIN | EPOLLET;
 	ev.data.fd = client_fd;
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev);
@@ -134,7 +160,7 @@ int Server::handle_input_client(int client_fd) {
 	}
 
 
-	ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_port);
+	ServerConfig srv_conf = Config::getInstance().getServerConfByPort(_port);
 
 	if (client->handle_request(srv_conf) < 0) {
 		return -1;
@@ -148,7 +174,8 @@ int Server::handle_output_client(int client_fd) {
 	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for client_fd: " + to_string(client_fd));
 	try {
 		Config& conf = Config::getInstance();
-		client->handle_response(conf.getServerConfByServerName(_port));
+		client->handle_response(conf.getServerConfByPort(_port));
+		return client->should_close();
 	} catch (HttpException::ForbiddenException &e) {
 		client->send_error(403, "Forbidden");
 		std::string val(e.what());

@@ -24,7 +24,7 @@ def main():
 	if verify_session():
 		print(f"Set-Cookie: session=invalid;")
 		print(f"Set-Cookie: session_id={session_id};")
-		print("Content-Type: text/html\r\n")
+		print("Content-Type: text/html\r\n\r\n")
 		print(f"""<!DOCTYPE html>
 		<html lang="es">
 		<head>

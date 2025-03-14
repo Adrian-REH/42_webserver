@@ -151,7 +151,8 @@ void HttpServerManager::handle_epoll()
 			else if (it_cli != _cli_srvs.end() &&  (events[i].events & EPOLLOUT))
 			{
 				Logger::log(Logger::INFO,"HttpServerManager.cpp", "Handling output client with FD: " + to_string(events[i].data.fd));
-				if (it_cli->second->handle_output_client(it_cli->first) < 0){
+				int code_res = it_cli->second->handle_output_client(it_cli->first);
+				if (code_res < 0){
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling output client with FD: " + to_string(it_cli->first));
 					deleteClient(it_cli->first);
 					continue ;
@@ -161,7 +162,8 @@ void HttpServerManager::handle_epoll()
 					deleteClient(it_cli->first);
 					continue;
 				}
-				deleteClient(it_cli->first);
+				if (code_res)
+					deleteClient(it_cli->first);
 			}
 			else if (it_cli != _cli_srvs.end() && (events[i].events & EPOLLIN))
 			{
@@ -202,6 +204,7 @@ int HttpServerManager::create_socket_fd(int port) {
 	Logger::log(Logger::INFO,"HttpServerManager.cpp", "Created socket_fd: " + to_string(socket_fd));
 
 	setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
 	fcntl(socket_fd, F_SETFL, O_NONBLOCK);
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;

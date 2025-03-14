@@ -77,7 +77,7 @@ std::map<int, ServerConfig> Config::getServerConfs() {
 	return _srvs_conf;
 }
 
-ServerConfig Config::getServerConfByServerName(const int port) {
+ServerConfig Config::getServerConfByPort(const int port) {
 	std::map<int, ServerConfig>::iterator it = _srvs_conf.find(port);
 
 	if (it != _srvs_conf.end()){

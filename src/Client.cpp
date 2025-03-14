@@ -19,7 +19,7 @@
  * @param socket_fd Descriptor de archivo del socket asociado al cliente.
  */
 Client::Client(int socket_fd, std::time_t _last_request, size_t n_req) :_socket_fd(socket_fd),
-	_last_request(_last_request), _n_request(n_req),_request(), _error(std::make_pair(0, "")) {}
+	_last_request(_last_request), _n_request(n_req),_request(), _error(std::make_pair(0, "")), _close(false) {}
 /**
  * @brief Destructor de la clase `Client`.
  * 
@@ -147,10 +147,11 @@ std::string create_start_line(std::pair<int , std::string > status){
 void Client::handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line) {
 	std::string connection = _request.get_header_by_key("Connection");
 
-	if (connection.empty()) {
-		rs_start_line.append("Connection: close");
+	if (connection.empty() || connection.compare("close") == 0) {
+		rs_start_line.append("Connection: close\r\n");
+		_close = true;
 	} else if (srv_conf.get_timeout() > 0 && connection.compare("keep-alive") == 0 && !has_max_req(srv_conf.get_max_req())) {
-		rs_start_line.append("Connection: Keep-Alive\r\n");
+		rs_start_line.append("Connection: keep-alive\r\n");
 		rs_start_line.append("Keep-Alive: timeout=" + to_string(srv_conf.get_timeout()) + ", max=" + to_string(srv_conf.get_max_req()) + "\r\n");
 	}
 }
@@ -261,6 +262,13 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			} else
 				rs_start_line.append("\r\n");
 			rs = readFileNameToStr(script_path.c_str());
+			std::size_t body_start = rs.find("\r\n\r\n");
+			if (body_start != std::string::npos)
+			{
+				body_start +=4;
+				std::string body = rs.substr(body_start);
+				rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+			}
 			rs_start_line.append(rs);
 			send_response(rs_start_line);
 			return 0;
@@ -305,18 +313,21 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					else
 						rs = resolve_html_path(srv_conf.get_error_page_by_code(cgi.get_status_code()));
 				} else {
+					std::cout << "CGI: CONTENT-LE" << std::endl;
 					std::size_t body_start = rs.find("\r\n\r\n");
 					if (body_start != std::string::npos)
 					{
 						body_start +=4;
 						std::string body = rs.substr(body_start);
 						rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+					}else {
+						std::cout <<"RS: " << rs<< std::endl;
+						rs_start_line.append("Content-Length: " + to_string(rs.size()) + "\r\n");
 					}
 				}
 				rs_start_line.append(rs);
 				send_response(rs_start_line);
 			}
-
 			return 0;
 		}
 		
@@ -378,6 +389,15 @@ int Client::handle_response(ServerConfig  srv_conf) {
 		std::string path_error = srv_conf.get_error_page_by_code(500);
 		rs = resolve_html_path(path_error);
 	}
+	handle_connection(srv_conf, rs_start_line);
+	
+	std::size_t body_start = rs.find("\r\n\r\n");
+	if (body_start != std::string::npos)
+	{
+		body_start +=4;
+		std::string body = rs.substr(body_start);
+		rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+	}
 	rs_start_line.append(rs);
 	send_response(rs_start_line);
 	return 0;
@@ -387,7 +407,8 @@ int Client::handle_response(ServerConfig  srv_conf) {
 void Client::send_response(std::string &response) {
 	if (!response.empty()) {
 		Logger::log(Logger::INFO, "Client.cpp", response.substr(0, response.find("\n")));
-		send(_socket_fd, response.c_str(), response.size(), 0);
+		std::size_t result = send(_socket_fd, response.c_str(), response.size(), 0);
+		std::cout << "RESULT SEND: "<< result << std::endl;
 	}
 }
 
@@ -415,6 +436,12 @@ std::string Client::get_port() const {
 
 std::string Client::get_ip() const{
 	return _ip;
+}
+bool Client::should_close() const {
+	return _close;
+}
+void Client::set_close(bool c) {
+	_close = c;
 }
 
 void Client::set_ip(std::string ip) {

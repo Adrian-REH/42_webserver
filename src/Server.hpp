@@ -30,6 +30,7 @@ private:
 	int _socket_fd;
 
 public:
+	void enable_keepalive(int sock);
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
 	Server(int port = 8080, size_t max_clients = 1024, std::string _server_name = "");
@@ -48,7 +49,7 @@ public:
 	
 	void deleteClient(const int client_fd);
 	bool hasClientTimedOut(const int key_client_fd) {
-		ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_port);
+		ServerConfig srv_conf = Config::getInstance().getServerConfByPort(_port);
 		std::map<int, Client*>::iterator it = _clients.find(key_client_fd);
 		if (it != _clients.end())
 			return it->second->has_client_timed_out() > srv_conf.get_timeout();

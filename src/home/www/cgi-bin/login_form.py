@@ -26,9 +26,7 @@ def loginForm():
 			mensaje = "Los datos han sido recibidos."
 
 	# Imprimir el encabezado y el cuerpo del HTML
-	print("Content-Type: text/html\r\n")  # Encabezado HTTP
-	print("")  # Línea en blanco para separar encabezados del cuerpo
-
+	print("Content-Type: text/html\r\n\r\n")  # Encabezado HTTP
 	# Página HTML de respuesta
 	print(f"""
 	<!DOCTYPE html>
