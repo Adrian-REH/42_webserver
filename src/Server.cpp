@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include "ClientManager.hpp"
 
 
 #define check(expr) if (!(expr)) { perror(#expr); kill(0, SIGTERM); }
@@ -136,6 +137,7 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 	_clients[client_fd]->set_ip(data_cli.first);
 	_clients[client_fd]->set_port(data_cli.second);
 
+
 	Logger::log(Logger::DEBUG, "Server.cpp", "The client was acepted: IP:PORT " + data_cli.first + ":" + data_cli.second + " fd: " + to_string(client_fd));
 	return std::make_pair(this, client_fd);
 }
@@ -175,6 +177,39 @@ int Server::handle_output_client(int client_fd) {
 	try {
 		Config& conf = Config::getInstance();
 		client->handle_response(conf.getServerConfByPort(_port));
+		return client->should_close();
+	} catch (HttpException::ForbiddenException &e) {
+		client->send_error(403, "Forbidden");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
+	} catch (HttpException::NotFoundException &e) {
+		client->send_error(404, "Not Found");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
+	} catch (HttpException::InternalServerErrorException &e) {
+		client->send_error(500, "Internal Server Error");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
+	} catch (std::exception &e) {
+		client->send_error(500, "Internal Server Error");
+		std::string val(e.what());
+		Logger::log(Logger::ERROR,"Server.cpp",  e.what());
+		return -1;
+	}
+	return 0;
+}
+
+
+
+int Server::handle_output_cgi(int cgi_fd) {
+	Client* client = ClientManager::getInstance().get_cli_by_pfd(cgi_fd);
+	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for cgi_fd: " + to_string(cgi_fd));
+	try {
+		Config& conf = Config::getInstance();
+		client->resolve_cgi(cgi_fd, conf.getServerConfByPort(_port));
 		return client->should_close();
 	} catch (HttpException::ForbiddenException &e) {
 		client->send_error(403, "Forbidden");

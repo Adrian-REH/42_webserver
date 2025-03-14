@@ -85,11 +85,11 @@ class Client {
 		int handle_request(ServerConfig);
 		/**
 		 * @brief Envía una respuesta al cliente a través del socket y cierra la conexión.
-		 * 
+		 *
 		 * Este método toma una respuesta en forma de cadena, la envía al cliente utilizando
 		 * el socket asociado y luego cierra el socket. Si la respuesta no está vacía,
 		 * imprime en la consola la primera línea de la respuesta (hasta el primer salto de línea).
-		 * 
+		 *
 		 * @param response Referencia a un objeto `std::string` que contiene la respuesta a enviar.
 		 */
 		void send_response(std::string &response);
@@ -114,6 +114,8 @@ class Client {
 
 		void set_ip(std::string);
 		void set_port(std::string);
+		int resolve_cgi(int cgi_fd, ServerConfig  srv_conf);
+
 };
 
 #endif

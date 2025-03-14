@@ -1,10 +1,21 @@
 
 #include "CGI.hpp"
 #include "Request.hpp"
+#include <sys/epoll.h>
 
 
-CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
-	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout), _interpreter(determine_interpreter()),_status_code(200) {
+CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, Cookie cookie, char** env, size_t exec_timeout)
+	: _working_dir(working_dir) ,
+	_script_path(script_path),
+	 _request(request), 
+	 _cookie(cookie),
+	 _env(env),
+	 _exec_timeout(exec_timeout),
+	 _exec_time(0),
+	  _interpreter(determine_interpreter()),
+	 _status_code(200),
+	 _pid(0),
+	 _cgi_fd(0){
 		determine_interpreter();
 	}
 CGI::~CGI() {
@@ -16,6 +27,15 @@ CGI::~CGI() {
 	}
 }
 
+int CGI::get_pfd() const{
+	return _cgi_fd;
+}
+int CGI::get_pid() const{
+	return _pid;
+}
+Cookie CGI::get_cookie() const{
+	return _cookie;
+}
 int CGI::get_status_code() {
 	return _status_code;
 }
@@ -74,8 +94,7 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
  * @return Respuesta HTTP generada por el script CGI.
  * @throws HttpException::InternalServerErrorException Si falla la creación del pipe o el fork.
  */
-std::string CGI::execute() {
-	int status;
+void CGI::execute() {
 	int cgi_io[2];
 	int cgi_response[2];
 	Logger::log(Logger::DEBUG, "CGI.cpp", "Executing CGI...");
@@ -86,15 +105,15 @@ std::string CGI::execute() {
 		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
 	}
-		
-	pid_t pid = fork();
-	if (pid < 0) {
+	_cgi_fd = cgi_response[0];
+	_pid = fork();
+	if (_pid < 0) {
 		closeFDs(cgi_response);
 		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
 	}
 	
-	if (pid == 0) {
+	if (_pid == 0) {
 		if (chdir(_working_dir.c_str()) == -1) {
 			closeFDs(cgi_response);
 			closeFDs(cgi_io);
@@ -119,6 +138,7 @@ std::string CGI::execute() {
 		exit(errno);
 	} else {
 		close(cgi_io[0]);
+		_exec_time = std::time(0);
 		Logger::log(Logger::DEBUG,"CGI.cpp","Body Writing.. size:" + to_string(_request.get_body().size()));
 		size_t chunk_size = 8192;
 		size_t written = 0;
@@ -132,69 +152,77 @@ std::string CGI::execute() {
 
 		close(cgi_io[1]);
 		close(cgi_response[1]);
-		fd_set set;
-		struct timeval timeout;
-		timeout.tv_sec = _exec_timeout;
-		timeout.tv_usec = 0;
-		FD_ZERO(&set);
-		FD_SET(cgi_response[0], &set);
-		/**
-		 * Escucho el estado del fd io[0] +1, en caso de que cambie su estado(alguienn escriba sobre el) antes de timeout entonces result = numero de fds escritos
-		 * Si en caso de que no se escriba sobre el hasta o luego de llegar a timeout, select devolvera 0fds escritos y ejecutare un error
-		 */
-		Logger::log(Logger::DEBUG,"CGI.cpp","Service waiting to pid: " + to_string(pid));
-		int nfds = select(cgi_response[0] + 1, &set, NULL , NULL, &timeout);
-		Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(pid) + " response nfds: " + to_string(nfds));
-		if (nfds == 0) {
-			kill(pid, SIGKILL);
-			close(cgi_response[0]);
-			throw HttpException::RequestTimeoutException("Timeout CGI execution");
-		} else if (nfds < 0) {
-			close(cgi_response[0]);
-			throw HttpException::InternalServerErrorException();
-		}
-			
-		//Obtengo el estado del pid
-		waitpid(pid, &status, 0);
-		int ret = 0;
-		if (WIFEXITED(status)){
-			ret = WEXITSTATUS(status);
-			Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
-		}
-		if (WIFSIGNALED(status)){
-			ret = WTERMSIG(status);
-			Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
-		}
-
-		std::string result;
-		size_t  expired = _exec_timeout + std::time(0);
-		char buffer[1024];
-		ssize_t bytes_read;
-	
-		while ((bytes_read = read(cgi_response[0], buffer, sizeof(buffer))) > 0) {
-			result.append(buffer, bytes_read);
-			std::time_t currentTime = std::time(0);
-			if (difftime(currentTime, expired) > 0) {
-				close(cgi_response[0]);
-				throw HttpException::RequestTimeoutException();
-			}	
-		}
-		close(cgi_response[0]);
-
-		if (ret) {
-			std::string error(strerror(ret));
-			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
-			switch (ret)
-			{
-				case 1	: _status_code = 502; break;
-				case 13	: _status_code = 403; break;
-				case 2	: _status_code = 404; break;
-				case 22	: _status_code = 400; break;
-				case 95	: _status_code = 405; break;
-				case 112: _status_code = 302; break;
-				default	: _status_code = 500; break;
-			}
-		}
-		return (result);
 	}
+}
+
+int CGI::istimeout() {
+	size_t time = std::time(0);
+	if (time - _exec_time > _exec_timeout) {
+		return true;
+	}
+	return false;
+}
+void CGI::verify_timeout() {
+	if (istimeout()) {
+		kill(_pid, SIGKILL);
+		close(_cgi_fd);
+		throw HttpException::RequestTimeoutException("Timeout CGI execution");
+	}
+}
+
+std::string CGI::resolve_response() {
+
+	int status = 0;
+	Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(_pid));
+	verify_timeout();
+
+	waitpid(_pid, &status, 0);
+	int ret = 0;
+	if (WIFEXITED(status)){
+		ret = WEXITSTATUS(status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
+	}
+	if (WIFSIGNALED(status)){
+		ret = WTERMSIG(status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
+	}
+
+	std::string result;
+	size_t  expired = _exec_timeout + std::time(0);
+	char buffer[1024];
+	ssize_t bytes_read;
+
+	while ((bytes_read = read(_cgi_fd, buffer, sizeof(buffer))) > 0) {
+		result.append(buffer, bytes_read);
+		std::time_t currentTime = std::time(0);
+		if (difftime(currentTime, expired) > 0) {
+			close(_cgi_fd);
+			throw HttpException::RequestTimeoutException();
+		}
+	}
+	close(_cgi_fd);
+
+	if (ret) {
+		std::string error(strerror(ret));
+		 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
+		switch (ret)
+		{
+			case 1	: _status_code = 502; break;
+			case 13	: _status_code = 403; break;
+			case 2	: _status_code = 404; break;
+			case 22	: _status_code = 400; break;
+			case 95	: _status_code = 405; break;
+			case 112: _status_code = 302; break;
+			default	: _status_code = 500; break;
+		}
+	}
+	return (result);
+}
+
+int CGI::cgi_kill() {
+	if (_pid)
+		kill( _pid,SIGKILL);
+	if (_cgi_fd > 1)
+		close(_cgi_fd);
+	return 0;
 }

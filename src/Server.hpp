@@ -33,6 +33,7 @@ public:
 	void enable_keepalive(int sock);
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
+	int handle_output_cgi(int cgi_fd);
 	Server(int port = 8080, size_t max_clients = 1024, std::string _server_name = "");
 	Server &set_port(const size_t port);
 	Server &setSocketFd(const int sock_fd);

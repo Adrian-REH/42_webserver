@@ -9,6 +9,8 @@
 #include "Cookie.hpp"
 #include "ServerConfig.hpp"
 #include "HttpStatus.hpp"
+#include "CGIManager.hpp"
+#include "ServerManager.hpp"
 
 /**
  * @brief Constructor de la clase `Client`.
@@ -291,6 +293,7 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					tmp.erase(0, 1);
 				if (access(tmp.c_str(), R_OK ) == -1)
 					throw HttpException::ForbiddenException();
+				// TODO: Debe generarse un ResponseManager en base a
 				Cookie cookie = handle_cookie();
 				std::string http_cookie = prepare_cgi_data(srv_conf, cookie);
 				std::string root_dir = loc.get_root_directory();
@@ -299,34 +302,23 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					script_path.erase(0, 1);
 				if (root_dir[0] == '/')
 					root_dir.erase(0, 1);
-				CGI cgi(root_dir, script_path, _request);
-				cgi.resolve_cgi_env(_request, http_cookie);
-				rs = cgi.execute();
 
-				update_cookie_from_response(rs, cookie);
-				//RESPONSE
-				rs_start_line = create_start_line(httpStatus.getStatusByCode(cgi.get_status_code()));
-				handle_connection(srv_conf, rs_start_line);
-				if (rs.empty()) {
-					if (cgi.get_status_code() == 200)
-						rs_start_line = create_start_line(httpStatus.getStatusByCode(204));
-					else
-						rs = resolve_html_path(srv_conf.get_error_page_by_code(cgi.get_status_code()));
-				} else {
-					std::cout << "CGI: CONTENT-LE" << std::endl;
-					std::size_t body_start = rs.find("\r\n\r\n");
-					if (body_start != std::string::npos)
-					{
-						body_start +=4;
-						std::string body = rs.substr(body_start);
-						rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
-					}else {
-						std::cout <<"RS: " << rs<< std::endl;
-						rs_start_line.append("Content-Length: " + to_string(rs.size()) + "\r\n");
-					}
+				CGI *cgi = new CGI(root_dir, script_path, _request, cookie); // TODO NECESITA EL EPOLL FD
+				cgi->resolve_cgi_env(_request, http_cookie);
+				cgi->execute();
+				ServerManager& srv_m = ServerManager::getInstance();
+				ClientManager& cli_m = ClientManager::getInstance();
+				CGIManager& cgi_m = CGIManager::getInstance();
+				Server* srv = ServerManager::getInstance().get_srv_by_cli(_socket_fd);
+				if (srv) {
+					cli_m.save_cli_by_pfd(std::make_pair(cgi->get_pfd(), this));
+					srv_m.save_server_type(cgi->get_pfd(), 2, srv);
+					cgi_m.save_cgi_by_pfd(std::make_pair(cgi->get_pfd(), cgi));
 				}
-				rs_start_line.append(rs);
-				send_response(rs_start_line);
+				struct epoll_event ev;
+				ev.events = EPOLLIN | EPOLLET;
+				ev.data.fd = cgi->get_pfd();
+				epoll_ctl(srv_m.get_epoll_fd(), EPOLL_CTL_ADD, cgi->get_pfd(), &ev);
 			}
 			return 0;
 		}
@@ -403,6 +395,78 @@ int Client::handle_response(ServerConfig  srv_conf) {
 	return 0;
 }
 
+
+int Client::resolve_cgi(int cgi_fd, ServerConfig  srv_conf) {
+	CGI* cgi = CGIManager::getInstance().get_cgi_by_pfd(cgi_fd);
+	HttpStatus& httpStatus = HttpStatus::getInstance();
+	std::string rs_start_line;
+	std::string rs;
+	try {
+		rs = cgi->resolve_response();
+		Cookie cookie = cgi->get_cookie();
+		
+		update_cookie_from_response(rs, cookie);
+		//RESPONSE
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(cgi->get_status_code()));
+		handle_connection(srv_conf, rs_start_line);
+		if (rs.empty()) {
+			if (cgi->get_status_code() == 200)
+				rs_start_line = create_start_line(httpStatus.getStatusByCode(204));
+			else
+				rs = resolve_html_path(srv_conf.get_error_page_by_code(cgi->get_status_code()));
+		} else {
+			std::size_t body_start = rs.find("\r\n\r\n");
+			if (body_start != std::string::npos)
+			{
+				body_start +=4;
+				std::string body = rs.substr(body_start);
+				rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+			}else {
+				std::cout <<"RS: " << rs<< std::endl;
+				rs_start_line.append("Content-Length: " + to_string(rs.size()) + "\r\n");
+			}
+		}
+		rs_start_line.append(rs);
+		send_response(rs_start_line);
+		return 0;
+	}
+	catch(HttpException::RequestTimeoutException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(408));
+		std::string path_error = srv_conf.get_error_page_by_code(408);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::UnsupportedMediaTypeException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(415));
+		std::string path_error = srv_conf.get_error_page_by_code(415);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::ForbiddenException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(HttpStatus::getInstance().getStatusByCode(403));
+		std::string path_error = srv_conf.get_error_page_by_code(403);
+		rs = resolve_html_path(path_error);
+	}
+	catch(HttpException::InternalServerErrorException &e) {
+		Logger::log(Logger::ERROR, "Client.cpp", e.what());
+		rs_start_line = create_start_line(httpStatus.getStatusByCode(500));
+		std::string path_error = srv_conf.get_error_page_by_code(500);
+		rs = resolve_html_path(path_error);
+	}
+	handle_connection(srv_conf, rs_start_line);
+	
+	std::size_t body_start = rs.find("\r\n\r\n");
+	if (body_start != std::string::npos)
+	{
+		body_start +=4;
+		std::string body = rs.substr(body_start);
+		rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
+	}
+	rs_start_line.append(rs);
+	send_response(rs_start_line);
+	return -1;
+}
 
 void Client::send_response(std::string &response) {
 	if (!response.empty()) {
