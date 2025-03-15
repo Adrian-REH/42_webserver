@@ -27,7 +27,7 @@ ServerConfig &ServerConfig::set_max_req(const size_t max_req) {
 
 ServerConfig &ServerConfig::set_timeout(const size_t timeout) {
 	if (this->_timeout && timeout)
-	this->_timeout = (timeout > 5) ? 5: timeout;
+	this->_timeout = (timeout > 100 || timeout <= 0) ? 50: timeout;
 	return *this;
 }
 
