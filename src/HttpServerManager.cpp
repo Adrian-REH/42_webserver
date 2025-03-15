@@ -4,7 +4,6 @@
 #include "HttpServerManager.hpp"
 #include "Logger.hpp"
 #include "Config.hpp"
-#include "CGIManager.hpp"
 #include "ClientManager.hpp"
 #include "ServerManager.hpp"
 
@@ -84,17 +83,16 @@ void HttpServerManager::handle_epoll()
 	struct epoll_event events[_max_events];
 	ServerManager& srv_m = ServerManager::getInstance();
 	while (true) {
-		int nfds = epoll_wait(_epoll_fd, events, _max_events, 3000);
+		int nfds = epoll_wait(_epoll_fd, events, _max_events, 1000);
 		if (nfds == -1) {
 			Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll_wait failed");
 			stop();
 			return ;
 		}
-		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds) + ", Clients conected: " + to_string(srv_m.get_clis_srvs().size()));
+		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds) + ", Clients conected: " + to_string(srv_m.get_clis_srvs().size()) + ", cgis: " + to_string(srv_m.get_cgis_srvs().size()));
 
 		nfds = srv_m.manageIdleClients(events, nfds, _epoll_fd);
 		for (int i = 0; i < nfds; ++i) {
-
 			std::pair<int, Server *> srv_type =  srv_m.find_server_type(events[i].data.fd);
 			Logger::log(Logger::INFO, "HttpServerManager.cpp", "Manage fd: " + to_string(events[i].data.fd) + ", type: " + to_string(srv_type.first));
 			
@@ -110,7 +108,7 @@ void HttpServerManager::handle_epoll()
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Failed to accept connection");
 				}
 			}
-			else if ((srv_type.first == 1 || srv_type.first == 2) && ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP))) {
+			else if ((srv_type.first == 1) && ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP))) {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "Failed event");
 				srv_m.delete_client(events[i].data.fd, _epoll_fd);
 			}
@@ -150,7 +148,7 @@ void HttpServerManager::handle_epoll()
 					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 				}
 			}
-			else if (srv_type.first == 2 && (events[i].events & EPOLLIN)){
+			else if (srv_type.first == 2){
 				int code_res = srv_type.second->handle_output_cgi(events[i].data.fd);
 				if (code_res < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling cgi resolve client with: " + to_string(events[i].data.fd));
@@ -167,8 +165,8 @@ void HttpServerManager::handle_epoll()
 			}
 			else {
 				Logger::log(Logger::ERROR,"HttpServerManager.cpp", "epoll error.");
-				stop();
-				return ;
+				//stop();
+				//return ;
 			}
 		}
 	}

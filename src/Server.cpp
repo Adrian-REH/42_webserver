@@ -145,10 +145,9 @@ std::pair<Server*, int> Server::accept_connections(int epoll_fd) {
 
 Client* Server::get_client(int client_fd) {
 	std::map<int, Client *>::iterator it = _clients.find(client_fd);
-	Client* client = NULL;
 	if (it != _clients.end())
-		client = it->second;
-	return client;
+		return it->second;
+	return NULL;
 }
 
 int Server::handle_input_client(int client_fd) {
@@ -177,7 +176,7 @@ int Server::handle_output_client(int client_fd) {
 	try {
 		Config& conf = Config::getInstance();
 		client->handle_response(conf.getServerConfByPort(_port));
-		return client->should_close();
+		return (client->should_close() && client->get_cgis().size() <= 0);
 	} catch (HttpException::ForbiddenException &e) {
 		client->send_error(403, "Forbidden");
 		std::string val(e.what());
@@ -233,4 +232,14 @@ int Server::handle_output_cgi(int cgi_fd) {
 		return -1;
 	}
 	return 0;
+}
+
+
+Client *Server::get_cli_by_pfd(int pfd) {
+	std::map<int, Client *>::iterator it = _clients.find(pfd);
+	for (it = _clients.begin(); it != _clients.end(); it++){
+		if (it->second->get_cgi_by_pfd(pfd))
+			return it->second;
+	}
+	return NULL;
 }

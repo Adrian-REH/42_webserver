@@ -29,10 +29,10 @@ CGI *CGIManager::save_cgi_by_pfd(std::pair<int, CGI*> pfd_cgi){
 	return pfd_cgi.second;
 }
 int CGIManager::kill_cgi_by_pfd(int pfd, int epoll_fd){
+	(void)epoll_fd;
 	std::map<int, CGI*>::iterator it = _pfd_cgi.find(pfd);
 	if (it != _pfd_cgi.end()) {
 		it->second->cgi_kill();
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
 		return 0;
 	}
 	return -1;
