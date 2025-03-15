@@ -15,7 +15,8 @@ CGI::CGI(const std::string& working_dir, const std::string& script_path, Request
 	  _interpreter(determine_interpreter()),
 	 _status_code(200),
 	 _pid(0),
-	 _cgi_fd(0){
+	 _cgi_fd(0),
+	 _status(0){
 		determine_interpreter();
 	}
 CGI::~CGI() {
@@ -105,7 +106,6 @@ void CGI::execute() {
 		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
 	}
-	_cgi_fd = cgi_response[0];
 	_pid = fork();
 	if (_pid < 0) {
 		closeFDs(cgi_response);
@@ -139,6 +139,7 @@ void CGI::execute() {
 	} else {
 		close(cgi_io[0]);
 		_exec_time = std::time(0);
+		_cgi_fd = cgi_response[0];
 		Logger::log(Logger::DEBUG,"CGI.cpp","Body Writing.. size:" + to_string(_request.get_body().size()));
 		size_t chunk_size = 8192;
 		size_t written = 0;
@@ -149,43 +150,33 @@ void CGI::execute() {
 			if (bytes_written <= 0) break;
 			written += bytes_written;
 		}
-
 		close(cgi_io[1]);
 		close(cgi_response[1]);
 	}
 }
 
 int CGI::istimeout() {
-	size_t time = std::time(0);
-	if (time - _exec_time > _exec_timeout) {
+	size_t  expired = _exec_timeout + _exec_time;
+	std::time_t currentTime = std::time(0);
+	if (difftime(currentTime, expired) > 0) {
 		return true;
 	}
 	return false;
 }
 void CGI::verify_timeout() {
 	if (istimeout()) {
-		kill(_pid, SIGKILL);
-		close(_cgi_fd);
+		if (_pid) {
+			kill(_pid, SIGKILL);
+			waitpid(_pid, &_status, -1);
+		}
 		throw HttpException::RequestTimeoutException("Timeout CGI execution");
 	}
 }
 
 std::string CGI::resolve_response() {
 
-	int status = 0;
 	Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(_pid));
 	verify_timeout();
-
-	waitpid(_pid, &status, 0);
-	int ret = 0;
-	if (WIFEXITED(status)){
-		ret = WEXITSTATUS(status);
-		Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
-	}
-	if (WIFSIGNALED(status)){
-		ret = WTERMSIG(status);
-		Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
-	}
 
 	std::string result;
 	size_t  expired = _exec_timeout + std::time(0);
@@ -201,7 +192,15 @@ std::string CGI::resolve_response() {
 		}
 	}
 	close(_cgi_fd);
-
+	int ret = 0;
+	if (WIFEXITED(_status)){
+		ret = WEXITSTATUS(_status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
+	}
+	if (WIFSIGNALED(_status)){
+		ret = WTERMSIG(_status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
+	}
 	if (ret) {
 		std::string error(strerror(ret));
 		 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
@@ -220,9 +219,10 @@ std::string CGI::resolve_response() {
 }
 
 int CGI::cgi_kill() {
-	if (_pid)
-		kill( _pid,SIGKILL);
-	if (_cgi_fd > 1)
-		close(_cgi_fd);
+	if (_pid){
+		kill( _pid, SIGKILL);
+		waitpid(_pid, &_status, -1);
+		_pid = 0;
+	}
 	return 0;
 }

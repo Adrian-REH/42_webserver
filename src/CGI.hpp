@@ -29,6 +29,7 @@ class CGI {
 		int	_status_code;
 		pid_t _pid;
 		int _cgi_fd;
+		int _status;
 
 	public:
 		CGI(){}
@@ -40,7 +41,7 @@ class CGI {
 		 * @param body Cuerpo de la solicitud HTTP.
 		 * @param env Variables de entorno para la ejecución.
 		 */
-		CGI(const std::string& working_dir, const std::string& script_path, Request request, Cookie cookie = Cookie(), char** env = NULL, size_t exec_timeout = 10);
+		CGI(const std::string& working_dir, const std::string& script_path, Request request, Cookie cookie = Cookie(), char** env = NULL, size_t exec_timeout = 5);
 		~CGI();
 		/**
 		 * @brief Determina el intérprete adecuado para el script según su extensión.
