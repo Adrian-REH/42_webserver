@@ -1,17 +1,8 @@
 
 
 #include "Client.hpp"
-#include "Location.hpp"
-#include "CGI.hpp"
-#include "Config.hpp"
-#include "HttpException.hpp"
-#include "SessionCookieManager.hpp"
-#include "Cookie.hpp"
-#include "ServerConfig.hpp"
-#include "HttpStatus.hpp"
-#include "CGIManager.hpp"
-#include "ServerManager.hpp"
 
+#include "ServerManager.hpp"
 /**
  * @brief Constructor de la clase `Client`.
  * 
@@ -21,7 +12,7 @@
  * @param socket_fd Descriptor de archivo del socket asociado al cliente.
  */
 Client::Client(int socket_fd, std::time_t _last_request, size_t n_req) :_socket_fd(socket_fd),
-	_last_request(_last_request), _n_request(n_req),_request(), _error(std::make_pair(0, "")), _close(false) {}
+	_last_request(_last_request), _n_request(n_req),_request(), _error(std::make_pair(0, "")), _close(false), _cgis() {}
 /**
  * @brief Destructor de la clase `Client`.
  * 
@@ -81,7 +72,7 @@ int Client::handle_request(ServerConfig srv_conf) {
 				if (!request_data.empty())
 					break;
 				// Client disconected
-				Logger::log(Logger::WARN, "Client.cpp", "Client disconnected, socket fd" + to_string(_socket_fd));
+				Logger::log(Logger::WARN, "Client.cpp", "Client disconnected, socket fd: " + to_string(_socket_fd));
 				return -1;
 			}
 			else {
@@ -308,12 +299,11 @@ int Client::handle_response(ServerConfig  srv_conf) {
 				cgi->execute();
 				ServerManager& srv_m = ServerManager::getInstance();
 				ClientManager& cli_m = ClientManager::getInstance();
-				CGIManager& cgi_m = CGIManager::getInstance();
 				Server* srv = ServerManager::getInstance().get_srv_by_cli(_socket_fd);
 				if (srv) {
+					_cgis[cgi->get_pfd()] = cgi;
 					cli_m.save_cli_by_pfd(std::make_pair(cgi->get_pfd(), this));
 					srv_m.save_server_type(cgi->get_pfd(), 2, srv);
-					cgi_m.save_cgi_by_pfd(std::make_pair(cgi->get_pfd(), cgi));
 				}
 				struct epoll_event ev;
 				ev.events = EPOLLIN | EPOLLET;
@@ -397,7 +387,10 @@ int Client::handle_response(ServerConfig  srv_conf) {
 
 
 int Client::resolve_cgi(int cgi_fd, ServerConfig  srv_conf) {
-	CGI* cgi = CGIManager::getInstance().get_cgi_by_pfd(cgi_fd);
+	Logger::log(Logger::INFO, "Client.cpp", "Resolving cgi");
+	CGI* cgi = get_cgi_by_pfd(cgi_fd);
+	if (cgi == NULL)
+		return -1;
 	HttpStatus& httpStatus = HttpStatus::getInstance();
 	std::string rs_start_line;
 	std::string rs;
@@ -518,4 +511,36 @@ void Client::set_port(std::string port) {
 
 bool Client::has_error() {
 	return (_error.first != 0 && !_error.second.empty());
+}
+CGI* Client::get_cgi_by_pfd(int pfd) {
+	std::map<int, CGI *>::iterator it  = _cgis.find(pfd);
+	return (it != _cgis.end()) ? it->second : NULL;
+}
+
+void Client::clear_cgis(int epoll_fd) {
+	std::map<int, CGI *>::iterator it;
+	Logger::log(Logger::DEBUG, "Client.cpp", "cleaning cgis...");
+	for (it = _cgis.begin(); it != _cgis.end();) {
+		Logger::log(Logger::DEBUG, "Client.cpp", "cleaning cgi_fd: "+ to_string(it->first));
+		it->second->cgi_kill();
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
+		close(it->first);
+		close(it->second->get_pfd());
+		delete it->second;
+		_cgis.erase(it);
+		it = _cgis.begin();
+	}
+}
+
+void Client::clear_cgi_by_fd(int pfd, int epoll_fd) {
+	std::map<int, CGI *>::iterator it = _cgis.find(pfd);
+	Logger::log(Logger::DEBUG, "Client.cpp", "cleaning cgi_fd: "+ to_string(pfd));
+	if (it != _cgis.end()) {
+		it->second->cgi_kill();
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
+		close(it->first);
+		close(it->second->get_pfd());
+		delete it->second;
+		_cgis.erase(it);
+	}
 }
