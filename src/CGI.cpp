@@ -17,6 +17,7 @@ CGI::CGI(const std::string& working_dir, const std::string& script_path, Request
 	 _pid(0),
 	 _cgi_fd(0),
 	 _status(0){
+		this->_exec_timeout = (exec_timeout > 10) ? 5: exec_timeout;
 		determine_interpreter();
 	}
 CGI::~CGI() {
