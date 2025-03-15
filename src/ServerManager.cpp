@@ -1,13 +1,15 @@
 
 #include "ServerManager.hpp"
-#include "CGIManager.hpp"
+#include <string>
 
 ServerManager::ServerManager(){
 
 }
 
 ServerManager::~ServerManager(){}
+
 ServerManager& ServerManager::operator=(ServerManager&){return *this;}
+
 ServerManager& ServerManager::getInstance(){
 	static ServerManager instance;
 	return instance;
@@ -98,21 +100,24 @@ void ServerManager::clear_srvs(int epoll_fd){
 std::map<int, Server *>::iterator ServerManager::delete_client(int client_fd, int epoll_fd){
 	std::map<int, Server *>::iterator tmp;
 	std::map<int, Server *>::iterator it = _cli_srvs.find(client_fd);
-	ClientManager& cli_m = ClientManager::getInstance();
-
 	if (it != _cli_srvs.end()){
+		Client * cli = it->second->get_client(client_fd);
+		if (cli) {
+			std::map<int, CGI*> cgis =  cli->get_cgis();
+			std::map<int, CGI*>::iterator it;
+			for (it = cgis.begin(); it != cgis.end() ; it++) {
+				Logger::log(Logger::DEBUG, "ServerManager.cpp", "Deleting cgi_fd: "+ to_string(it->first) + ", from client_fd: " + to_string(client_fd));
+				std::map<int, Server *>::iterator tmp = _cgi_srvs.find(it->first);
+				if (tmp != _cgi_srvs.end())
+					_cgi_srvs.erase(tmp);
+			}
+			cli->clear_cgis(epoll_fd);
+		}
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL);
 		close(client_fd);
 		_cli_srvs[client_fd]->deleteClient(client_fd);
 		_cli_srvs.erase(it);
-		for (tmp = _cgi_srvs.begin(); tmp != _cgi_srvs.end() ; tmp++) {
-			if (cli_m.get_cli_by_pfd(tmp->first)){
-				epoll_ctl(epoll_fd, EPOLL_CTL_DEL, tmp->first, NULL);
-				close(tmp->first);
-				_cgi_srvs.erase(tmp);
-				tmp = _cgi_srvs.begin();
-			}
-		}
+		it = _cli_srvs.begin();
 	}
 	return it;
 }
@@ -129,14 +134,16 @@ std::map<int, Server *>::iterator ServerManager::delete_server(int sock_fd, int 
 std::map<int, Server *>::iterator ServerManager::delete_cli_by_cgi(int cgi_fd, int epoll_fd){
 	ClientManager& cli_m = ClientManager::getInstance();
 	Client *cli = cli_m.get_cli_by_pfd(cgi_fd);
+	std::cout << "ServerManager::delete_cli_by_cgi" << std::endl;
 	return delete_client(cli->get_socket_fd(), epoll_fd);
 }
 
 std::map<int, Server *>::iterator ServerManager::delete_cgi(int cgi_fd, int epoll_fd){
 	std::map<int, Server *>::iterator it = _cgi_srvs.find(cgi_fd);
 	if (it != _cgi_srvs.end()){
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, cgi_fd, NULL);
-		close(cgi_fd);
+		Client* cli = it->second->get_cli_by_pfd(cgi_fd);
+		if (cli)
+			cli->clear_cgi_by_fd(cgi_fd, epoll_fd);
 		_cgi_srvs.erase(it);
 	}
 	return it;
@@ -149,7 +156,7 @@ int ServerManager::manageIdleClients(struct epoll_event *events, int nfds, int e
 	for (int i = 0; i < nfds; i++) {
 		it_event = srv_m.get_srv_by_cli(events[i].data.fd);
 		if (it_event != NULL && it_event->hasClientTimedOut(events[i].data.fd)) {
-			Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(events[i].data.fd)+" timed out");
+			Logger::log(Logger::INFO, "ServerManager.cpp", "An event from client_fd: "+ to_string(events[i].data.fd)+", was heard, it is timeout");
 			delete_client(events[i].data.fd, epoll_fd);
 			events[i].data.fd = 0;
 			events[i].events = 0;
@@ -157,25 +164,18 @@ int ServerManager::manageIdleClients(struct epoll_event *events, int nfds, int e
 		}
 	}
 	for (it = _cli_srvs.begin(); it != _cli_srvs.end(); ) {
+		Client * cli = it->second->get_client(it->first);
 		if (it->second->hasClientTimedOut(it->first)) {
+			Logger::log(Logger::INFO, "ServerManager.cpp", "Connected clients were checked and client_fd: "+ to_string(it->first)+", it is timed out");
 			delete_client(it->first, epoll_fd);
 			it = _cli_srvs.begin();
-			Logger::log(Logger::INFO, "HttpServerManager.cpp", "has client_fd: "+ to_string(it->first)+" timed out");
+		}  else if (cli) {
+			Logger::log(Logger::INFO, "ServerManager.cpp", "Checking the client_fd: "+ to_string(it->first)+" cgis");
+			cli->killCGITimedOut();
+			it++;
 		} else {
 			it++;
 		}
 	}
-	CGIManager& cgi_m = CGIManager::getInstance();
-	//CONTROLAR SI LOS CGI ESTAN EN TIMEOUT
-	for (it = _cgi_srvs.begin(); it != _cgi_srvs.end(); ) {
-		if (cgi_m.timeout(it->first)) { //DEBE HABER UNO QUE VERIFIQUE SI EL CGI ESTA EN TIMEOUT
-			delete_cli_by_cgi(it->first, epoll_fd);
-			it = _cli_srvs.begin();
-			Logger::log(Logger::INFO, "HttpServerManager.cpp", "has cgi_fd: "+ to_string(it->first)+" timed out");
-		} else {
-			it++;
-		}
-	}
-	//TODO: Debo buscar si un CGI esta en timeout
 	return nfds;
 }
