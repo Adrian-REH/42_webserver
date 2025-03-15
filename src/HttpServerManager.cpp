@@ -30,7 +30,7 @@ int HttpServerManager::start() {
 	fcntl(_epoll_fd, F_SETFD, FD_CLOEXEC);
 
 	for (it = srvs_conf.begin(); it != srvs_conf.end(); it++) {
-		socket_fd = create_socket_fd(it->second.get_port());
+		socket_fd = create_socket_fd(it->second.get_port(), max_clients_srv);
 		if (socket_fd < 0) {
 			Logger::log(Logger::WARN,"HttpServerManager.cpp",  it->second.get_server_name()+ ":" + to_string(it->second.get_port()) + " failed: Address already in use");
 			continue ;
@@ -74,10 +74,6 @@ void HttpServerManager::stop() {
 	close(_epoll_fd);
 }
 
-
-
-
-
 void HttpServerManager::handle_epoll()
 {
 	struct epoll_event events[_max_events];
@@ -89,9 +85,9 @@ void HttpServerManager::handle_epoll()
 			stop();
 			return ;
 		}
+		srv_m.cleanupTimedOut(_epoll_fd);
 		Logger::log(Logger::INFO,"HttpServerManager.cpp", "Number of events received: " + to_string(nfds) + ", Clients conected: " + to_string(srv_m.get_clis_srvs().size()) + ", cgis: " + to_string(srv_m.get_cgis_srvs().size()));
-
-		nfds = srv_m.manageIdleClients(events, nfds, _epoll_fd);
+		nfds = srv_m.cleanupTimedOutEvents(events, nfds, _epoll_fd);
 		for (int i = 0; i < nfds; ++i) {
 			std::pair<int, Server *> srv_type =  srv_m.find_server_type(events[i].data.fd);
 			Logger::log(Logger::INFO, "HttpServerManager.cpp", "Manage fd: " + to_string(events[i].data.fd) + ", type: " + to_string(srv_type.first));
@@ -172,7 +168,7 @@ void HttpServerManager::handle_epoll()
 	}
 }
 
-int HttpServerManager::create_socket_fd(int port) {
+int HttpServerManager::create_socket_fd(int port, int max_clients_srv) {
 	int opt = 1;
 	struct sockaddr_in addr;
 	int socket_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -194,12 +190,12 @@ int HttpServerManager::create_socket_fd(int port) {
 		close(socket_fd);
 		return (-1);
 	}
-	if (listen(socket_fd, MAX_CLIENTS) < 0) {
+	if (listen(socket_fd, max_clients_srv) < 0) {
 		Logger::log(Logger::WARN,"HttpServerManager.cpp", "Fail to listen socket_fd: " + to_string(socket_fd));
 		close(socket_fd);
 		return (-1);
 	}
-	Logger::log(Logger::DEBUG,"HttpServerManager.cpp", "Max-Clients: " + to_string(MAX_CLIENTS) + ", socket_fd: " + to_string(socket_fd));
+	Logger::log(Logger::DEBUG,"HttpServerManager.cpp", "Max-Clients: " + to_string(max_clients_srv) + ", socket_fd: " + to_string(socket_fd));
 	return socket_fd;
 }
 

@@ -12,7 +12,7 @@ class HttpServerManager {
 
 		int set_event_action(int client_fd, uint32_t action);
 		void handle_epoll();
-		int create_socket_fd(int port);
+		int create_socket_fd(int port, int max_clients_srv);
 	public:
 		HttpServerManager();
 		int start();

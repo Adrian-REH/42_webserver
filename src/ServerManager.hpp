@@ -39,7 +39,8 @@ class ServerManager {
 
 		std::map<int, Server *>::iterator delete_cgi(int cgi_fd, int epoll_fd);
 
-		int manageIdleClients(struct epoll_event *events, int nfds, int epoll_fd);
+		int cleanupTimedOut(int epoll_fd);
+		int cleanupTimedOutEvents(struct epoll_event *events, int nfds, int epoll_fd);
 };
 
 #endif

@@ -149,12 +149,11 @@ std::map<int, Server *>::iterator ServerManager::delete_cgi(int cgi_fd, int epol
 	return it;
 }
 
-int ServerManager::manageIdleClients(struct epoll_event *events, int nfds, int epoll_fd) {
-	ServerManager& srv_m = ServerManager::getInstance();
+int ServerManager::cleanupTimedOutEvents(struct epoll_event *events, int nfds, int epoll_fd) {
 	std::map<int, Server*>::iterator it ;
 	Server* it_event ;
 	for (int i = 0; i < nfds; i++) {
-		it_event = srv_m.get_srv_by_cli(events[i].data.fd);
+		it_event = this->get_srv_by_cli(events[i].data.fd);
 		if (it_event != NULL && it_event->hasClientTimedOut(events[i].data.fd)) {
 			Logger::log(Logger::INFO, "ServerManager.cpp", "An event from client_fd: "+ to_string(events[i].data.fd)+", was heard, it is timeout");
 			delete_client(events[i].data.fd, epoll_fd);
@@ -163,6 +162,12 @@ int ServerManager::manageIdleClients(struct epoll_event *events, int nfds, int e
 			nfds--;
 		}
 	}
+	return nfds;
+}
+
+int ServerManager::cleanupTimedOut( int epoll_fd) {
+	std::map<int, Server*>::iterator it ;
+
 	for (it = _cli_srvs.begin(); it != _cli_srvs.end(); ) {
 		Client * cli = it->second->get_client(it->first);
 		if (it->second->hasClientTimedOut(it->first)) {
@@ -177,5 +182,5 @@ int ServerManager::manageIdleClients(struct epoll_event *events, int nfds, int e
 			it++;
 		}
 	}
-	return nfds;
+	return 0;
 }
