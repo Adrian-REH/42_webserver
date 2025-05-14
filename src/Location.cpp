@@ -2,7 +2,7 @@
 #include "Location.hpp"
 #include "Logger.hpp"
 
-Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false), _client_max_body_size(1000000),_path_upload_directory("") {}
+Location::Location(): _path(""), _limit_except(), _redirect_url(""),_index(""), _files(), _root_directory(""), _auto_index(false),_auto_index_download(false), _client_max_body_size(1000000),_path_upload_directory("") {}
 
 Location &Location::set_root_directory(const std::string &root) {
 	_root_directory = root;
@@ -26,6 +26,7 @@ Location &Location::set_path(const std::string &path) {
 
 Location &Location::set_auto_index(const std::string &rule) {
 	_auto_index = (rule.find("on") != std::string::npos);
+	_auto_index_download = (rule.find("on download") != std::string::npos);
 	return *this;
 }
 
@@ -55,7 +56,9 @@ Location &Location::set_limit_except(LimitExcept &l) {
 	_limit_except = l;
 	return *this;
 }
-
+bool Location::is_download() const{
+	return _auto_index_download;
+}
 std::string Location::get_path() const {
 	return _path;
 }
@@ -80,7 +83,6 @@ std::string Location::get_root_directory() const {
 
 Location Location::build() {
 	if (_root_directory.empty())
-	//FIXME: En caso de que no haya literalmente un root_dir es necesario que sea resiliente asi que propongo poner "/"
 		throw std::runtime_error("Error: no existe un directorio root");
 	return *this;
 }
@@ -103,7 +105,7 @@ std::string Location::buildFullPath(const std::string &root,const std::string pa
 int Location::findScriptPath(const std::string &url_path, std::string &final_path) {
 	std::string path = extractStrEnd(url_path, _path);
 	std::string file;
-	std::cout << "[DEBUG] begin path " << path << std::endl;
+	Logger::log(Logger::DEBUG, "Location.cpp", "Begin path '" + path + "'");
 	// Case 1: Path is base root '/'
 	if (!_index.empty() && path.empty() && _path == url_path)
 		return final_path = buildFullPath(_root_directory, "", _index), 0;
@@ -120,8 +122,7 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		return final_path = buildFullPath(_root_directory, "", path), 0;
 	
 	std::string work_dir = buildFullPath(_root_directory, path, "");
-
-	std::cout << "[DEBUG] Work dir, get files: '" << work_dir <<"' file: "<< file << std::endl;
+	Logger::log(Logger::DEBUG, "Location.cpp", "Work dir, get files: '" + work_dir +"' file: "+ file);
 	if (work_dir == "/")
 		work_dir = ".";
 	const char * dir = work_dir.c_str();
@@ -133,29 +134,17 @@ int Location::findScriptPath(const std::string &url_path, std::string &final_pat
 		_files = get_all_dirs(dir); 
 		std::vector<std::string>::iterator it;
 		for (it = _files.begin(); it != _files.end(); ++it) {
-				std::cout << *it << std::endl;
 			if (!file.empty() && ends_with(*it, file)) {
 				return final_path = buildFullPath(dir, "", file), 0;
 			}
 		}
-		std::cout << "sss"<< std::endl;
+	
 		if (it == _files.end() && !file.empty())
 			throw HttpException::NotFoundException();
 	} catch (const std::exception &e){
 		Logger::log(Logger::ERROR,"Location.cpp", e.what());
-		throw HttpException::NotFoundException(); // No existte dir
+		throw HttpException::NotFoundException(); // Dir doesnt exist
 	}
-	//existe dir y tiene o no autoindex
+	//Dir exist and has or hasnt autoindex
 	return (final_path = dir, 1);
 }
-/**
- * FIX: autoindex paths on findScriptPath()
- * FIX: else if (*it == _index){ 
- * 
- * 
- * casos:
- * 	- /cgi-bin y path es /cgi-bin/ (no es el mismo) y existe el base '/'
- * 	- /cgi-bin y no existe path relacionaddo pero exxiste el base /
- * 	- /cgi-bin/upload_file.py y existe path es /cgi-bin/ con su index y otros mas incluido /
- * 	- /images/kpop/ikon.jpeg y existe path /iamges/ con root en /img/www => /img/www/kpop/ikon.jpeg
- */

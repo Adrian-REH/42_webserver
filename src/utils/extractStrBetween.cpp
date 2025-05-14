@@ -9,7 +9,7 @@ std::string extractStrBetween(const std::string& line, const std::string& init, 
 
     size_t endPos = line.find(end, startPos);
     if (endPos == std::string::npos) {
-        throw std::invalid_argument("End delimiter not found in line");
+        endPos = line.length();
     }
 
     return line.substr(startPos, endPos - startPos);

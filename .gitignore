@@ -1,4 +1,4 @@
 *.o
 
-WEBS
+webserv
 *.pyc

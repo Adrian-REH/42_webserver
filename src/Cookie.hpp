@@ -4,16 +4,20 @@
 #include "utils/Utils.hpp"
 
 struct Cookie {
-	std::string name;
-	std::string value;
-	std::time_t expiration;
+	private:
+		std::string _name;
+		std::string _value;
+		std::time_t _expiration;
 
-	Cookie() : name(""), value(""), expiration(0) {}
-
-	bool isEmpty() {
-		return (value.empty() || name.empty() ) && expiration == 0;
-	}
+	public:
+		Cookie();
+		std::string get_value() const;
+		std::string get_name() const;
+		int get_expiration() const;
+		void set_value(std::string v);
+		void set_name(std::string n);
+		void set_expiration(int e);
+		bool isEmpty();
 };
-
 
 #endif

@@ -1,20 +1,10 @@
-#!/usr/bin/env python3import cgi, os
+# upload_file.py
+import cgi, os
 import cgitb
 import http.cookies
-
-def verify_session():
-	try:
-		cookie_header = os.environ.get('HTTP_COOKIE', '')
-		if not cookie_header:
-			return False
-		cookie = http.cookies.SimpleCookie(cookie_header)
-		if 'session_id' in cookie:
-			session_id = cookie['session_id'].value
-			return session_id if session_id else False
-		return False
-	except Exception as e:
-		print(f"Error procesando cookies: {e}")
-		return False
+import io
+import sys
+from auth import verify_session
 
 # Generator to buffer file chunks
 def fbuffer(f, chunk_size=10000):
@@ -23,59 +13,125 @@ def fbuffer(f, chunk_size=10000):
 		if not chunk: break
 		yield chunk
 
+def handle_request_file(fileitem):
+	# strip leading path from file name
+	# to avoid directory traversal attacks
+	filename = os.path.basename(fileitem.filename)
+	print(f"<b> {filename}</b>")
+	
+	real = os.path.abspath(__file__)
+	dir_path = os.path.dirname(real)
+	
+
+	path_f = os.path.join(dir_path, "files", filename)
+	try:
+		f = open(path_f, 'wb', 10000)
+	except IOError as exc:
+		""" tb = sys.exc_info()[-1]
+		lineno = tb.tb_lineno
+		filename = tb.tb_frame.f_code.co_filename """
+		print('<b>{} <b>.'.format(exc.strerror))
+		sys.exit(exc.errno)
+	for chunk in fbuffer(fileitem.file):
+		f.write(chunk)
+	f.close()
+	message = 'The file "' + filename + '" was uploaded successfully'
+
 def main():
-	
-	'''session_id = verify_session()
+	session_id = verify_session()
 	if not session_id:
-		print(f"Set-Cookie: session_id={session_id}")
+		print(f"Set-Cookie: session={session_id}")
 		print("Content-Type: text/html\r\n")
-		print("<h1>Error: Sesión invalida</h1>")
-		return '''
-	#cgitb.enable()
+		print("<h1>Error: Sesion invalida</h1>")
+		return
 	form = cgi.FieldStorage()
-
-	#print(f"""Set-Cookie: session_id={session_id}""")
-	#if "filename" not in form:
-	#	print("Content-Type: text/html\r\n")
-	#	print("<H1>Error: Archivo invalido</H1>")
-	#	return
 	
-
+	print("Content-Type: text/html\r\n")
+	print("")
 	# A nested FieldStorage instance holds the file
 	fileitem = form['file']
-
+	
 	# Test if the file was uploaded
 	if fileitem.filename:
-
 		# strip leading path from file name
 		# to avoid directory traversal attacks
 		filename = os.path.basename(fileitem.filename)
-		f = open('files/' + filename, 'wb')
+		print(f"<b> {filename}</b>")
+		
+		real = os.path.abspath(__file__)
+		dir_path = os.path.dirname(real)
+		
+		path_f = os.path.join(dir_path, "files", filename)
+		try:
+			f = open(path_f, 'wb', 10000)
+		except IOError as exc:
+			""" tb = sys.exc_info()[-1]
+			lineno = tb.tb_lineno
+			filename = tb.tb_frame.f_code.co_filename """
+			print('<b>{} <b>.'.format(exc.strerror))
+			sys.exit(exc.errno)
 		for chunk in fbuffer(fileitem.file):
-			f.write(fileitem.file.read())
+			f.write(chunk)
 		f.close()
-		message = 'The file "' + fn + '" was uploaded successfully'
-
+		message = 'The file "' + filename + '" was uploaded successfully'
 	else:
 		message = 'No file was uploaded'
-	print("Content-Type: text/html\r\n")
-	print("")
-	print(f"<H1>Error: Archivo {fileitem}</H1>")
-	
 	print(f"""
 	<!DOCTYPE html>
 	<html lang="es">
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+		.button {{
+			background-color: #007BFF;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 4px;
+			font-size: 1rem;
+			cursor: pointer;
+			text-decoration: none;
+		}}
+		.button:hover {{
+			background-color: #0056b3;
+		}}
+		</style>
 		</head>
 		<body>
 			<p>{message}</p>
+			<a href="#" id="deleteButton" class="button">Delete {filename}</a>
+			<script>
+				document.getElementById('deleteButton').addEventListener('click', function(event) {{
+					event.preventDefault();  // Evita que el enlace navegue a la URL
+
+					// Realiza una solicitud DELETE al servidor
+					fetch('http://localhost:8080/cgi-bin/delete_file.js', {{
+						method: 'DELETE',
+						headers: {{
+							'Content-Type': 'application/json',
+						}},
+						body: JSON.stringify({{
+							fileId: '{filename}',
+						}}),
+					}})
+					.then(response => {{
+						if (response.ok) {{
+							alert('Archivo eliminado con éxito');
+						}} else {{
+							alert('Error al eliminar el archivo');
+						}}
+					}})
+					.catch(error => {{
+						alert('Error en la solicitud: ' + error);
+					}});
+				}});
+			</script>
 		</body>
 	</html>
 	""")
 
 
+
 if __name__ == "__main__":
-	
 	main()

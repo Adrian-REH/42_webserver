@@ -1,13 +1,12 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-//#pragma once
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <poll.h>
-#include <sys/epoll.h> // for epoll_create1(), epoll_ctl(), struct epoll_event
+#include <sys/epoll.h> // for epoll_create(), epoll_ctl(), struct epoll_event
 #include <map>
 #include "Client.hpp"
 #include <stdexcept>
@@ -31,8 +30,11 @@ private:
 	int _socket_fd;
 
 public:
+	void enable_keepalive(int sock);
 	int handle_input_client(int client_fd);
 	int handle_output_client(int client_fd);
+	int handle_output_cgi(int cgi_fd);
+	Client *get_cli_by_pfd(int pfd);
 	Server(int port = 8080, size_t max_clients = 1024, std::string _server_name = "");
 	Server &set_port(const size_t port);
 	Server &setSocketFd(const int sock_fd);
@@ -49,7 +51,7 @@ public:
 	
 	void deleteClient(const int client_fd);
 	bool hasClientTimedOut(const int key_client_fd) {
-		ServerConfig srv_conf = Config::getInstance().getServerConfByServerName(_port);
+		ServerConfig srv_conf = Config::getInstance().getServerConfByPort(_port);
 		std::map<int, Client*>::iterator it = _clients.find(key_client_fd);
 		if (it != _clients.end())
 			return it->second->has_client_timed_out() > srv_conf.get_timeout();

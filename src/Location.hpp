@@ -14,6 +14,7 @@ class Location {
 		std::vector<std::string> _files; // Todos los archivos con la _type_extension.
 		std::string _root_directory;  // Directorio o archivo que se sirve.
 		bool _auto_index;  // Para listar directorios.
+		bool _auto_index_download;  // Para listar directorios.
 		size_t _client_max_body_size;  // Tamaño máximo del cuerpo de la solicitud (si se aplica).
 		std::string _path_upload_directory;  // Para subir archivos.
 	public:
@@ -103,6 +104,7 @@ class Location {
 		Location &set_limit_except(LimitExcept &l);
 
 		std::string get_path() const;
+		bool is_download() const;
 
 		int get_auto_index() const;
 

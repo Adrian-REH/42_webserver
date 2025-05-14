@@ -63,11 +63,7 @@ class HttpException  {
 				return (_message).c_str();
 			}
 	};
-	/*
-	//TODO: If the condition is temporary, the server SHOULD include a Retry-
-   			After header field to indicate that it is temporary and after what
-   			time the client MAY try again.
-	*/
+
 	class RequestEntityTooLargeException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
@@ -81,7 +77,16 @@ class HttpException  {
 				return "414 Request-URI Too Long";
 			}
 	};
-
+	class UnsupportedMediaTypeException : public std::exception {
+		private:
+			std::string _message;
+		public:
+			UnsupportedMediaTypeException(std::string message = ""): _message("415 Unsupported Media Type : " + message) {}
+			virtual ~UnsupportedMediaTypeException() throw() {}
+			virtual const char* what() const throw() {
+				return (_message).c_str();
+			}
+	};
 	class InternalServerErrorException : public std::exception {
 		public:
 			virtual const char* what() const throw() {
@@ -95,12 +100,6 @@ class HttpException  {
 				return "505 HTTP Version Not Supported";
 			}
 	};
-
-
-	
-
 };
-
-
 
 #endif

@@ -8,10 +8,16 @@
 #include "utils/Utils.hpp"
 #include "Request.hpp"
 #include "Logger.hpp"
+#include "CGI.hpp"
 #include <ctime>
 #include "SessionCookieManager.hpp"
 #include "Cookie.hpp"
 #include "ServerConfig.hpp"
+#include "Location.hpp"
+#include "Config.hpp"
+#include "HttpException.hpp"
+#include "Cookie.hpp"
+#include "HttpStatus.hpp"
 /**
  * @brief Clase que representa un cliente conectado al servidor.
  * 
@@ -27,6 +33,8 @@ class Client {
 		size_t _n_request;
 		Request _request;
 		std::pair<int, std::string> _error;
+		bool _close;
+		std::map<int, CGI*> _cgis;
 		void handle_connection(const ServerConfig& srv_conf, std::string& rs_start_line);
 		Cookie handle_cookie();
 		std::string prepare_cgi_data( const ServerConfig &srv_conf, Cookie cookie);
@@ -84,11 +92,11 @@ class Client {
 		int handle_request(ServerConfig);
 		/**
 		 * @brief Envía una respuesta al cliente a través del socket y cierra la conexión.
-		 * 
+		 *
 		 * Este método toma una respuesta en forma de cadena, la envía al cliente utilizando
 		 * el socket asociado y luego cierra el socket. Si la respuesta no está vacía,
 		 * imprime en la consola la primera línea de la respuesta (hasta el primer salto de línea).
-		 * 
+		 *
 		 * @param response Referencia a un objeto `std::string` que contiene la respuesta a enviar.
 		 */
 		void send_response(std::string &response);
@@ -106,11 +114,33 @@ class Client {
 		size_t  has_client_timed_out();
 		bool  has_max_req(size_t n_req);
 		std::string get_port() const;
+		bool should_close() const;
+		void set_close(bool);
 		std::string get_ip() const;
 		Request get_request() const;
 
 		void set_ip(std::string);
 		void set_port(std::string);
+		int resolve_cgi(int cgi_fd, ServerConfig  srv_conf);
+		CGI* get_cgi_by_pfd(int);
+		void clear_cgis(int);
+
+		void clear_cgi_by_fd(int pfd, int epoll_fd);
+
+		bool killCGITimedOut() {
+			std::map<int, CGI*>::iterator it;
+			for (it = _cgis.begin(); it != _cgis.end() ; it++) {
+				if (it->second->istimeout()) {
+					Logger::log(Logger::INFO, "Client.cpp", "Kill cgi_fd: "+ to_string(it->first)+" , it is timeout");
+					it->second->cgi_kill();
+				}
+			}
+			return false;
+		}
+		std::map<int, CGI*> get_cgis(){
+			return _cgis; 
+		}
+
 };
 
 #endif

@@ -41,7 +41,7 @@ void Request::parse_start_line(const std::string& start_line) {
 void Request::parse_headers(const std::string& headers_section) {
 	std::istringstream stream(headers_section);
 	std::string line;
-	//Itero linea a linea buscando : para parsear key value to map
+	
 	Logger::log(Logger::DEBUG, "Request.cpp", "Request Header:");
 	while (std::getline(stream, line) && line != "\r") {
 		size_t colon_pos = line.find(": ");
@@ -49,7 +49,7 @@ void Request::parse_headers(const std::string& headers_section) {
 			std::string key = line.substr(0, colon_pos);
 			std::string value = strtrim(line.substr(colon_pos + 2));
 			_headers[key] = value;
-			//Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
+			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
 	}
 	
@@ -65,46 +65,37 @@ void Request::parse_headers(const std::string& headers_section) {
  * @throws std::runtime_error Si el tamaño del cuerpo no coincide con Content-Length.
  */
 void Request::parse_body(const std::string& body_section, size_t content_length) {
-	std::cout << "body_section size: " << body_section.size() << std::endl;
-	std::cout << "content_length : "<< content_length << std::endl;
-	if (content_length >_location.get_client_max_body_size() || body_section.size() > content_length){
+	if (content_length > _location.get_client_max_body_size() || body_section.size() > content_length){
 		throw HttpException::RequestEntityTooLargeException();
 	} else if (body_section.size() == content_length) {
 		_state = DONE;
-	}
+	} 
 }
 
-/**
- * //TODO: 501 (Not Implemented) if the method is
-   unrecognized or not implemented by the origin server. The methods GET
-   and HEAD MUST be supported by all general-purpose servers. All other
-   methods are OPTIONAL
- *
- */
+
 void Request::receiving_headers()
 {
 	size_t header_end = _raw_req.find("\r\n\r\n");
 	if (header_end == std::string::npos) {
 		if (_state != RECEIVING_HEADERS) {
 			_state = RECEIVING_HEADERS;
-			Logger::log(Logger::INFO, "Request.cpp", "Change State to: RECEIVING_HEADERS");
-		} //TODO: Chequear si envian headers sin \r\n\r\n ?????
-		return ;//throw std::runtime_error("Malformed request: missing header-body separator.");
+			Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: RECEIVING_HEADERS");
+		}
+		return ;
 	}
 	_state = RECEIVING_BODY;
-	std::cout << "header_end : '" << header_end << "' size: " << _raw_req.size() << std::endl;
 	std::string start_line = _raw_req.substr(0, _raw_req.find("\r\n"));
 	std::string headers_section = _raw_req.substr(_raw_req.find("\r\n") + 2, header_end - _raw_req.find("\r\n") - 2);
 	parse_start_line(start_line);
 	parse_headers(headers_section);
-	//Logger::log(Logger::DEBUG, "Request.cpp", "_path: " + _path);
 	Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: RECEIVING_BODY");
 	receiving_body(_raw_req.substr(header_end + 4));
 }
 
-void Request::   receiving_body(std::string body_section) {
+void Request::receiving_body(std::string body_section) {
 	_body += body_section;
 
+	
 	if (_method == "GET" || _method == "HEAD")
 	{
 		if (!_body.empty())
@@ -112,29 +103,23 @@ void Request::   receiving_body(std::string body_section) {
 		_state = DONE;
 		return ;
 	}
-
-	std::cout << "_body '" << _body << "'" << std::endl;
-	if (_body.empty())
-		return ;
 	
-	//std::cout << _body.substr(0, _body.find("\r\n")) << "" <<_body.substr(_body.find("\r\n") + 2).find("\r\n") << "' " << std::endl;
-	//std::cout << "_headers '" <<_headers[CONTENT_LENGTH] << "'" <<std::endl;
-	if (is_chunked_request() && _state < DONE) {	
+	if (!_body.empty() && is_chunked_request() && _state < DONE) {	
 		read_chunked_body();
-	} else if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
-		//TODO: use content length to verify if body size matches 
+	} else if ( _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
 		size_t content_length = (size_t) to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
-		Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE REQ");
+		Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: DONE REQ");
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "POST" ){ // Handles error on POST and DELETE
+		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "DELETE"){
+		_state = DONE;
+		return;
+	} else if (_body.empty()){
+		return ;
 	} else {
 		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");
 	}
-	/**
-	 * When a Content-Length is given in a message where a message-body is
-	 * allowed, its field value MUST exactly match the number of OCTETs in
-	 * the message-body. HTTP/1.1 user agents MUST notify the user when an
-	 * invalid length is received and detected.
-	 */
 }
 
 void Request::read_chunked_body(){
@@ -145,27 +130,25 @@ void Request::read_chunked_body(){
 	size_t full_size = 0;
 	bool is_size_line = true;
 	std::string decoded_body;
-	
-	while (std::getline(stream, line) && line != "\r") {
+	Logger::log(Logger::INFO, "Request.cpp", "Reading chunked body");
+	while (std::getline(stream, line)) {
 		if (is_size_line)
 		{
 			size_line = line.substr(0, line.find("\r"));
 			if (size_line.empty())
-			{
-				std::cout << "size_line.empty" << std::endl;
-				return ;
-			}
-			//std::cout << "size_line " << size_line << std::endl;
+				throw HttpException::BadRequestException("Multipart request malformed");
 			// Read body chunk
-			chunk_size = to_hex_ulong(size_line.substr(0, size_line.find(";")));
+			if (size_line.find(";") == std::string::npos)
+				chunk_size = to_hex_ulong(strtrim(size_line));
+			else
+				chunk_size = to_hex_ulong(size_line.substr(0, size_line.find(";")));
 			full_size += chunk_size;
 			if (full_size > _location.get_client_max_body_size())
 				throw HttpException::RequestEntityTooLargeException();
 			std::getline(stream, line);
 		}
 		
-		//std::cout << "chunk_size " << chunk_size << std::endl;
-		if (chunk_size == 0) // && line.substr(0, line.find("\r")).size() == chunk_size)
+		if (chunk_size == 0)
 		{
 			// Reads entity-header 
 			if (_headers.find("Trailer") != _headers.end())
@@ -173,7 +156,6 @@ void Request::read_chunked_body(){
 				size_t trailer_end = line.find("\r");
 				while (line != "\r" && trailer_end != std::string::npos)
 				{
-					//std::string header = line.substr(0, trailer_end);
 					size_t colon_pos = line.find(": ");
 					if (colon_pos != std::string::npos) {
 						std::string key = line.substr(0, colon_pos);
@@ -186,22 +168,25 @@ void Request::read_chunked_body(){
 				}
 			}
 			_headers[CONTENT_LENGTH] = full_size;
-			//ENDING OF BODY
 			_body = decoded_body;
 			_state = DONE;
-			Logger::log(Logger::INFO, "Request.cpp", "Change State to: DONE CHUNKED BODY");
+			Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: DONE CHUNKED BODY");
 			return ;
 		} else if (line.substr(0, line.find("\r")).size() < chunk_size)
 		{
-			//KEEP READING BYTES
+			Logger::log(Logger::DEBUG, "Request.cpp", "KEEP READING BYTES");
 			is_size_line = false;
 			decoded_body += (line + "\n");
-			chunk_size -= line.size() - 1;
+			chunk_size -= (line.size() + 1);
 		} else if (line.substr(0, line.find("\r")).size() > chunk_size)
-			throw HttpException::BadRequestException("Body chunk of wrong size."); //
-		else 
+			throw HttpException::BadRequestException("Body chunk of wrong size.");
+		else {
+			is_size_line = true;
 			decoded_body += line.substr(0, line.find("\r"));
+		}
+			
 	}
+	throw HttpException::BadRequestException("Body chunk of wrong size.");
 }
 
 bool Request::is_chunked_request() {
@@ -218,7 +203,6 @@ bool isExpired(size_t expiration) {
 	return difftime(currentTime, expiration) > 0;
 }
 
-//TODO: _timeot
 /**
  * @brief Analiza una solicitud HTTP a partir de un buffer.
  * 
@@ -229,27 +213,26 @@ bool isExpired(size_t expiration) {
  * @throws std::runtime_error Si la solicitud está malformada o falta información requerida.
  */
 void Request::parser(std::string req) {
-	//size_t content_length = 0; TODO: usar
-	Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
-	if (_state == INIT || _state == RECEIVING_HEADERS) {
-		if (_header_time == 0)
-			_header_time = std::time(0) + _header_timeout;
-		_raw_req += req;
-		receiving_headers();
-		if (isExpired(_header_time)) {
-			_state = DONE;
-			throw HttpException::RequestTimeoutException("Timeout header read");
+	try {
+		Logger::log(Logger::DEBUG, "Request.cpp", "Last state: " + to_string(_state));
+		if (_state == INIT || _state == RECEIVING_HEADERS) {
+			if (_header_time == 0)
+				_header_time = std::time(0) + _header_timeout;
+			_raw_req += req;
+			receiving_headers();
+			if (isExpired(_header_time))
+				throw HttpException::RequestTimeoutException("Timeout header read");
+		} else if (_state == RECEIVING_BODY) {
+			if (_body_time == 0)
+				_body_time = std::time(0) + _body_timeout;
+			receiving_body(req);
+			if (isExpired(_body_time))
+				throw HttpException::RequestTimeoutException("Timeout body read");
 		}
-	} else if (_state == RECEIVING_BODY) {
-		if (_body_time == 0)
-			_body_time = std::time(0) + _body_timeout;
-		receiving_body(req);
-		if (isExpired(_body_time)){
+	} catch (std::exception & e) {
 			_state = DONE;
-			throw HttpException::RequestTimeoutException("Timeout body read");
-		}
+			throw;
 	}
-	//TODO: Controlar si está DONE?
 }
 
 

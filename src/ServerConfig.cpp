@@ -4,13 +4,18 @@
 #include "HttpException.hpp"
 
 ServerConfig::ServerConfig(int port, size_t max_clients, size_t timeout, size_t max_req) : _port(port), _max_clients(max_clients), _timeout(timeout),_max_req(max_req) {
-	_error_pages[400] = "/html/400.html";
-	_error_pages[404] = "/html/404.html";
-	_error_pages[408] = "/html/408.html";
-	_error_pages[405] = "/html/405.html";
-	_error_pages[204] = "/html/204.html";
-	_error_pages[301] = "/html/301.html";
-	_error_pages[500] = "/html/500.html";
+	_error_pages[400] = "/home/www/html/400.html";
+	_error_pages[403] = "/home/www/html/403.html";
+	_error_pages[404] = "/home/www/html/404.html";
+	_error_pages[408] = "/home/www/html/408.html";
+	_error_pages[405] = "/home/www/html/405.html";
+	_error_pages[413] = "/home/www/html/413.html";
+	_error_pages[414] = "/home/www/html/414.html";
+	_error_pages[415] = "/home/www/html/415.html";
+	_error_pages[204] = "/home/www/html/204.html";
+	_error_pages[301] = "/home/www/html/301.html";
+	_error_pages[500] = "/home/www/html/500.html";
+	_error_pages[502] = "/home/www/html/502.html";
 }
 
 ServerConfig &ServerConfig::set_max_req(const size_t max_req) {
@@ -22,7 +27,7 @@ ServerConfig &ServerConfig::set_max_req(const size_t max_req) {
 
 ServerConfig &ServerConfig::set_timeout(const size_t timeout) {
 	if (this->_timeout && timeout)
-	this->_timeout = (timeout > 5) ? 5: timeout;
+		this->_timeout = (timeout > 100 || timeout < 10) ? 50: timeout;
 	return *this;
 }
 
@@ -53,7 +58,6 @@ ServerConfig &ServerConfig::add_location(const Location &location) {
 }
 ServerConfig &ServerConfig::set_error_page(const int code, std::string path) {
 	std::map<int, std::string>::iterator it = _error_pages.find(code);
-	//TODO: Debo verificar si hay un archivo en ese path y si no hay lanzo un error
 	if (it != _error_pages.end())
 		_error_pages[code] = path;
 	return *this;
@@ -67,10 +71,8 @@ int countOccurrences(const std::string& str, const std::string& sub) {
 	int count = 0;
 	size_t pos = 0;
 
-	// Usamos find para buscar subcadenas
 	if ((pos = str.find(sub, pos)) != std::string::npos) {
-		count += sub.length();  // Encontró una coincidencia
-		//pos += sub.length();  // Avanza la posición para buscar la siguiente coincidencia
+		count += sub.length();  
 	}
 
 	return count;
@@ -93,7 +95,7 @@ Location ServerConfig::findMatchingLocation(const std::string path) {
 	if (it == _locations_conf.end()) {
 		for (it = _locations_conf.begin(); it != _locations_conf.end(); it++) {
 			std::string prefix = it->first;
-			if (path.size() < prefix.size())
+			if (path.size()  < prefix.size())
 				continue ;
 			int ocurrences = countOccurrences(path, prefix);
 			if ( ocurrences > tmp_max_ocurrences) {
