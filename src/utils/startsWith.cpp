@@ -11,7 +11,7 @@
  */
 bool starts_with(const std::string& str, const std::string& prefix) {
     if (str.size() < prefix.size()) {
-        return false;  // No puede comenzar con el prefijo si es más pequeño
+        return false;  
     }
     return str.compare(0, prefix.size(), prefix) == 0;
 }

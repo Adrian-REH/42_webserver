@@ -12,19 +12,19 @@ SessionCookieManager& SessionCookieManager::getInstance() {
 
 bool SessionCookieManager::isExpired(const Cookie& cookie) {
 	std::time_t currentTime = std::time(0);
-	return difftime(currentTime, cookie.expiration) > 0;
+	return difftime(currentTime, cookie.get_expiration()) > 0;
 }
 
 Cookie SessionCookieManager::setCookieBySessionId(const std::string& session_id, int expirationInSeconds) {
 	std::time_t currentTime = std::time(0);
 	removeExpiredCookies();
-	if (getCookieBySessionId(session_id).isEmpty())
-		return Cookie();
+	Cookie cookie = getCookieBySessionId(session_id);
+	if (!cookie.isEmpty())
+		return cookie;
 	std::time_t expirationTime = currentTime + expirationInSeconds;
-	Cookie cookie;
-	cookie.name = "session_id";
-	cookie.value = session_id;
-	cookie.expiration = expirationTime;
+	cookie.set_name("session_id");
+	cookie.set_value(session_id);
+	cookie.set_expiration(expirationTime);
 	_cookies[session_id] = cookie;
 	return cookie;
 }
@@ -42,7 +42,8 @@ Cookie SessionCookieManager::getCookieBySessionId(const std::string& session_id)
 }
 
 void SessionCookieManager::deleteCookieBySessionId(const std::string& session_id) {
-	_cookies.erase(session_id);
+	if (_cookies.find(session_id) != _cookies.end())
+		_cookies.erase(session_id);
 }
 
 bool SessionCookieManager::isCookieExpired(const Cookie& cookie) {
@@ -53,7 +54,7 @@ bool SessionCookieManager::isCookieExpiredBySessionId(const std::string& session
 	if (_cookies.find(session_id) != _cookies.end()) {
 		return isExpired(_cookies[session_id]);
 	}
-	return true;  // Si no existe, consideramos que está "expirada"
+	return true;  // If it doesnt exist, it is considered "expired"
 }
 
 void SessionCookieManager::removeExpiredCookies() {

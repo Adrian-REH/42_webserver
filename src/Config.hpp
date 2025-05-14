@@ -14,6 +14,7 @@ class Config {
 	private:
 		size_t _max_clients;
 		std::map<int, ServerConfig> _srvs_conf;
+		std::map<std::string, std::string> _mimetypes;
 		Config();
 		Config(const Config&);
 		Config& operator=(const Config&);
@@ -21,7 +22,8 @@ class Config {
 		static Config &getInstance();
 		void addServerConf(ServerConfig);
 		std::map<int, ServerConfig> getServerConfs();
-		ServerConfig getServerConfByServerName(const int);
+		ServerConfig getServerConfByPort(const int);
+		std::string getMimeTypeByExtension(const std::string);
 
 	class ConfigNotFoundException : public std::exception {
 		public:
@@ -30,10 +32,14 @@ class Config {
 			}
 	};
 
-	class ConfigServerNameExistException : public std::exception {
+	class ConfigServerPortExistException : public std::exception {
+		private:
+			std::string _message;
 		public:
+			ConfigServerPortExistException(std::string message = ""):_message("The server port: " + message + " already exist") {}
+			virtual ~ConfigServerPortExistException() throw() {}
 			const char* what() const throw() {
-				return "The server_name already exists";
+				return (_message).c_str();
 			}
 	};
 };

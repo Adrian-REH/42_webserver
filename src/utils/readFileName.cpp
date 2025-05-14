@@ -6,7 +6,6 @@ std::deque<std::string> readFileName(const char *_filename)
 {
 	std::deque<std::string>		content;
 	std::string					line;
-	//std::map<std::string, int>	exchange;
 	std::ifstream				inFile(_filename);
 
 	if (!inFile)

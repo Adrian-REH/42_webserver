@@ -1,11 +1,46 @@
 
 #include "CGI.hpp"
 #include "Request.hpp"
+#include <sys/epoll.h>
 
 
-CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env, size_t exec_timeout)
-	: _working_dir(working_dir) ,_script_path(script_path), _request(request), _env(env),_exec_timeout(exec_timeout) {}
+CGI::CGI(const std::string& working_dir, const std::string& script_path, Request request, Cookie cookie, char** env, size_t exec_timeout)
+	: _working_dir(working_dir) ,
+	_script_path(script_path),
+	 _request(request), 
+	 _cookie(cookie),
+	 _env(env),
+	 _exec_timeout(exec_timeout),
+	 _exec_time(0),
+	  _interpreter(determine_interpreter()),
+	 _status_code(200),
+	 _pid(0),
+	 _cgi_fd(0),
+	 _status(0){
+		this->_exec_timeout = (exec_timeout > 10) ? 5: exec_timeout;
+		determine_interpreter();
+	}
+CGI::~CGI() {
+	
+	if (_env) {
+		for (int i = 0; _env[i] != 0; i++)
+			delete [] _env[i];
+		delete [] _env;
+	}
+}
 
+int CGI::get_pfd() const{
+	return _cgi_fd;
+}
+int CGI::get_pid() const{
+	return _pid;
+}
+Cookie CGI::get_cookie() const{
+	return _cookie;
+}
+int CGI::get_status_code() {
+	return _status_code;
+}
 /**
  * @brief Determina el intérprete adecuado para el script según su extensión.
  * 
@@ -20,13 +55,14 @@ std::string CGI::determine_interpreter() const {
 	} else if (ends_with(_script_path, ".js")) {
 		return "/usr/bin/node";
 	} else {
-		throw std::runtime_error("Unsupported script type: " + _script_path);
+		throw HttpException::UnsupportedMediaTypeException("Unsupported script type: " + _script_path);
 	}
 }
 
 int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	std::vector<std::string> env_strings;
-	env_strings.push_back(http_cookie);
+	env_strings.push_back(std::string(http_cookie));
+	env_strings.push_back("REDIRECT_STATUS=200" );
 	env_strings.push_back("REQUEST_METHOD=" + req.get_method());
 	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
 	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("Content-Length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
@@ -42,12 +78,10 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 
 	_env = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); ++i) {
-		_env[i] = (char*)env_strings[i].c_str();
-		char * s_cstr = new char[env_strings[i].size() + 1];
-		std::strcpy(s_cstr, env_strings[i].c_str());
-		_env[i] = s_cstr;
+		_env[i] = new char[env_strings[i].size() + 1];
+		std::strcpy(_env[i], env_strings[i].c_str());
 	}
-	_env[env_strings.size()] = NULL;  // El último elemento debe ser NULL
+	_env[env_strings.size()] = 0;  // El último elemento debe ser NULL
 	
 	return 0;
 }
@@ -62,79 +96,134 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
  * @return Respuesta HTTP generada por el script CGI.
  * @throws HttpException::InternalServerErrorException Si falla la creación del pipe o el fork.
  */
-std::string CGI::execute() {
-	int status;
-	int io[2];
+void CGI::execute() {
+	int cgi_io[2];
+	int cgi_response[2];
+	Logger::log(Logger::DEBUG, "CGI.cpp", "Executing CGI...");
 
-	if (pipe(io) < 0)
+	if (pipe(cgi_io) < 0)
 		throw HttpException::InternalServerErrorException();
-
-	pid_t pid = fork();
-	if (pid < 0)
+	if (pipe(cgi_response) < 0) {
+		closeFDs(cgi_io);
 		throw HttpException::InternalServerErrorException();
-
-	if (pid == 0) {
-		try {
-			if (chdir(_working_dir.c_str()) == -1) {
-				exit(errno);// failure exit from CHILD PROCESS
-			}
-
-			std::string interpreter = determine_interpreter();
-			char* argv[] = {
-				(char*)interpreter.c_str(),
-				(char*)_script_path.c_str() , // Quito el primer caracter '/'
-				NULL
-			};
-			dup2(io[1], STDOUT_FILENO);
-			dup2(io[1], STDERR_FILENO);
-			close(io[1]);
-			dup2(io[0], STDIN_FILENO);
-			close(io[0]);
-
-			execve(interpreter.c_str(), argv, _env);
-			exit(4);
-		} catch (const std::exception&  ) {
-			exit(2);
-		}
-	} else {
-		
-		write(io[1], _request.get_body().c_str(), _request.get_body().size());
-		close(io[1]);
-		fd_set set;
-		struct timeval timeout;
-		timeout.tv_sec = _exec_timeout;
-		timeout.tv_usec = 0;
-		FD_ZERO(&set);
-		FD_SET(io[0], &set);
-
-		/**
-		 * Escucho el estado del fd io[0] +1, en caso de que cambie su estado(alguienn escriba sobre el) antes de timeout entonces result = numero de fds escritos
-		 * Si en caso de que no se escriba sobre el hasta o luego de llegar a timeout, select devolvera 0fds escritos y ejecutare un error
-		 */
-		int nfds = select(io[0] + 1, &set, NULL , NULL, &timeout);
-		if (nfds == 0) {
-			kill(pid, SIGKILL);
-			throw HttpException::RequestTimeoutException("Timeout CGI execution");
-		} else if (nfds < 0)
-			throw HttpException::InternalServerErrorException();
-		//Obtengo el estado del pid
-		waitpid(pid, &status, 0);
-		int ret;
-		if (WIFEXITED(status)){
-			ret = WEXITSTATUS(status);
-			//Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
-		}
-		if (WIFSIGNALED(status)){
-			ret = WTERMSIG(status);
-			//Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
-		}
-		std::string result = readFd(io[0]);
-		close(io[0]);
-		if (ret) {
-			std::string error(strerror(ret));
-			 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
-			throw HttpException::InternalServerErrorException();
-		}
-		return (result);
 	}
+	_pid = fork();
+	if (_pid < 0) {
+		closeFDs(cgi_response);
+		closeFDs(cgi_io);
+		throw HttpException::InternalServerErrorException();
+	}
+	
+	if (_pid == 0) {
+		if (chdir(_working_dir.c_str()) == -1) {
+			closeFDs(cgi_response);
+			closeFDs(cgi_io);
+			exit(errno);
+		}
+		char* argv[] = {
+			(char*)_interpreter.c_str(),
+			(char*)_script_path.c_str(),
+			NULL
+		};
+		std::cout << argv[0]<< std::endl;
+		std::cout << argv[1]<< std::endl;
+		std::cout << argv[2]<< std::endl;
+		if (dup2(cgi_response[1], STDOUT_FILENO) < 0)
+			(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+		if (dup2(cgi_io[0], STDIN_FILENO) < 0)
+			(closeFDs(cgi_response), closeFDs(cgi_io), exit(errno));
+		
+		closeFDs(cgi_response);
+		closeFDs(cgi_io);
+		execve(_interpreter.c_str(), argv, _env);
+		exit(errno);
+	} else {
+		close(cgi_io[0]);
+		_exec_time = std::time(0);
+		_cgi_fd = cgi_response[0];
+		Logger::log(Logger::DEBUG,"CGI.cpp","Body Writing.. size:" + to_string(_request.get_body().size()));
+		size_t chunk_size = 8192;
+		size_t written = 0;
+
+		while (written < _request.get_body().size()) {
+			size_t to_write = std::min(chunk_size, _request.get_body().size() - written);
+			ssize_t bytes_written = write(cgi_io[1], _request.get_body().c_str() + written, to_write);
+			if (bytes_written <= 0) break;
+			written += bytes_written;
+		}
+		close(cgi_io[1]);
+		close(cgi_response[1]);
+	}
+}
+
+int CGI::istimeout() {
+	size_t  expired = _exec_timeout + _exec_time;
+	std::time_t currentTime = std::time(0);
+	if (difftime(currentTime, expired) > 0) {
+		return true;
+	}
+	return false;
+}
+void CGI::verify_timeout() {
+	if (istimeout()) {
+		if (_pid) {
+			kill(_pid, SIGKILL);
+			waitpid(_pid, &_status, -1);
+		}
+		throw HttpException::RequestTimeoutException("Timeout CGI execution");
+	}
+}
+
+std::string CGI::resolve_response() {
+
+	Logger::log(Logger::DEBUG,"CGI.cpp","pid: " + to_string(_pid));
+	verify_timeout();
+
+	std::string result;
+	size_t  expired = _exec_timeout + std::time(0);
+	char buffer[1024];
+	ssize_t bytes_read;
+
+	while ((bytes_read = read(_cgi_fd, buffer, sizeof(buffer))) > 0) {
+		result.append(buffer, bytes_read);
+		std::time_t currentTime = std::time(0);
+		if (difftime(currentTime, expired) > 0) {
+			close(_cgi_fd);
+			throw HttpException::RequestTimeoutException();
+		}
+	}
+	close(_cgi_fd);
+	int ret = 0;
+	if (WIFEXITED(_status)){
+		ret = WEXITSTATUS(_status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WEXITSTATUS "+ to_string(ret));
+	}
+	if (WIFSIGNALED(_status)){
+		ret = WTERMSIG(_status);
+		Logger::log(Logger::WARN,"CGI.cpp", "WTERMSIG "+ to_string(ret));
+	}
+	if (ret) {
+		std::string error(strerror(ret));
+		 Logger::log(Logger::ERROR,"CGI.cpp", "Error en la ejecucion del CGI, Error : " + to_string(ret) + " " +error + ", script_path: " + _script_path + ", body:" + _request.get_body() + ", result: " + result);
+		switch (ret)
+		{
+			case 1	: _status_code = 502; break;
+			case 13	: _status_code = 403; break;
+			case 2	: _status_code = 404; break;
+			case 22	: _status_code = 400; break;
+			case 95	: _status_code = 405; break;
+			case 112: _status_code = 302; break;
+			default	: _status_code = 500; break;
+		}
+	}
+	return (result);
+}
+
+int CGI::cgi_kill() {
+	if (_pid){
+		kill( _pid, SIGKILL);
+		waitpid(_pid, &_status, -1);
+		_pid = 0;
+	}
+	return 0;
 }

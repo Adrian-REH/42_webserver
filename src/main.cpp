@@ -12,34 +12,27 @@ void	sigint_handler(int signum)
 		std::cout << "SIGKILL"<< std::endl;
 }
 
-
-int main(int argc, char **argv, char **env) {
-	struct sigaction	sa;
-	sa.sa_handler = sigint_handler;
-	sa.sa_flags = (sigemptyset(&sa.sa_mask), 0);
-	(sigaction(SIGINT, &sa, NULL), sigaction(SIGQUIT, &sa, NULL));
-	sigaction(SIGKILL, &sa, NULL);
+int main(int argc, char **argv) {
+	signal(SIGINT, sigint_handler);
+	signal(SIGKILL, sigint_handler);
+	signal(SIGPIPE, sigint_handler);
 	
-	if (argc != 2)
-		return 1;
-	try
-	{
-		std::cout << argv[1] << std::endl;
-		ParserConfig parserSrv(argv[1]);
+	ParserConfig parserSrv;
+	try {
 		if (argc > 2)
 		{
-			std::cerr << "[ERROR] Wrong number of arguments: " << argv[0] << " configuration_filename" << std::endl;
+			Logger::log(Logger::ERROR, "main.cpp", "Wrong number of arguments: " + std::string(argv[0]) + " configuration_filename");
 			return 1;
 		}
 		else if (argc == 2 && !parserSrv.dumpRawData(argv[1]))
 			return 1;
-		parserSrv.execute(env);
-	
+		parserSrv.execute();
 		HttpServerManager httpManager;
 		httpManager.start();
 	}
-	catch(const std::exception& e)
-	{
-		Logger::log(Logger::ERROR, "main.cpp", e.what());
+	catch(const std::exception& e) {
+		Logger::log(Logger::ERROR, "main.cpp", std::string(e.what()) + ", line: " + parserSrv.get_last_lane_parser());
+		return 1;
 	}
+	return 0;
 }

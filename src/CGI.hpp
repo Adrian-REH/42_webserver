@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "HttpException.hpp"
 #include "Request.hpp"
+#include "Cookie.hpp"
 
 /**
  * @brief Clase para gestionar la ejecución de scripts CGI.
@@ -20,10 +21,18 @@ class CGI {
 		std::string _working_dir;
 		std::string _script_path;
 		Request _request;
+		Cookie _cookie;
 		char** _env;
 		size_t _exec_timeout;
+		size_t _exec_time;
+		std::string _interpreter;
+		int	_status_code;
+		pid_t _pid;
+		int _cgi_fd;
+		int _status;
 
 	public:
+		CGI(){}
 		/**
 		 * @brief Constructor de la clase CGI.
 		 * 
@@ -32,7 +41,8 @@ class CGI {
 		 * @param body Cuerpo de la solicitud HTTP.
 		 * @param env Variables de entorno para la ejecución.
 		 */
-		CGI(const std::string& working_dir, const std::string& script_path, Request request, char** env = NULL, size_t exec_timeout = 10);
+		CGI(const std::string& working_dir, const std::string& script_path, Request request, Cookie cookie = Cookie(), char** env = NULL, size_t exec_timeout = 5);
+		~CGI();
 		/**
 		 * @brief Determina el intérprete adecuado para el script según su extensión.
 		 * 
@@ -42,6 +52,7 @@ class CGI {
 		std::string determine_interpreter() const;
 
 		int resolve_cgi_env(Request, std::string);
+		int cgi_kill();
 
 
 		/**
@@ -53,7 +64,14 @@ class CGI {
 		 * @return Respuesta HTTP generada por el script CGI.
 		 * @throws std::runtime_error Si falla la creación del pipe o el fork.
 		 */
-		std::string execute();
+		void execute();
+		int istimeout();
+		void verify_timeout();
+		std::string resolve_response();
+		int get_pfd() const;
+		int get_pid() const;
+		Cookie get_cookie() const;
+		int get_status_code();
 };
 
 #endif

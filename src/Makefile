@@ -10,37 +10,36 @@
 #                                                                              #
 # **************************************************************************** #
 
-NAME = WEBS
+NAME = webserv
 CXX = c++
 CXXFLAGS = -Wall -Werror -Wextra -D LOG_LEVEL=3 -std=c++98 -g3 
-COVFLAGS = #-g -fPIC  -fprofile-arcs -ftest-coverage
+#COVFLAGS = -g -fPIC  -fprofile-arcs -ftest-coverage
 INCLUDE = -I.  -Iutils
 SRCS = main.cpp Server.cpp ServerConfig.cpp HttpServerManager.cpp Location.cpp \
-		CGI.cpp Request.cpp Client.cpp\
+		CGI.cpp Request.cpp Client.cpp LimitExcept.cpp Logger.cpp Cookie.cpp\
 		utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
 		utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
 		utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp \
-		utils/generateIndexHtml.cpp \
-		ParserConfig.cpp  Config.cpp  \
-		SessionCookieManager.cpp
+		utils/generateIndexHtml.cpp utils/closeFDs.cpp\
+		ParserConfig.cpp Config.cpp HttpStatus.cpp \
+		SessionCookieManager.cpp CGIManager.cpp ServerManager.cpp
 OBJS = ${SRCS:.cpp=.o}
 
 # Regla por defecto
 
 # Compilar el ejecutable
 $(NAME): $(OBJS) 
-			$(CXX) $(CXXFLAGS) -o $(NAME) $(COVFLAGS) $(INCLUDE) $(OBJS) 
+			$(CXX) $(CXXFLAGS) -o $(NAME) $(INCLUDE) $(OBJS) 
 			
 all: $(NAME)
 
 
 # Regla para compilar los archivos .o
 %.o:%.cpp $(INCLUDE)
-		$(CXX) $(CXXFLAGS) $(COVFLAGS)  -c $< -o $@
+		$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Limpiar los archivos generados
 clean:
-	rm -f $(OBJS) *.gcov *.gcda logs *.gcno *.html *.css 
 	rm -f $(OBJS)
 	@echo "Archivos .o eliminados."
 
