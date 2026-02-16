@@ -25,7 +25,6 @@ def main():
 	form = cgi.FieldStorage()
 	if os.environ.get("REQUEST_METHOD") == "DELETE":
 		sys.exit(92)
-
 	if (form.getvalue('username') == 'admin' and form.getvalue('password') == 'admin') or verify_session():
 		session_id = fetch_srv_session_id()
 		print(f"Set-Cookie: session=valid;")

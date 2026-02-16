@@ -2,7 +2,7 @@
 #include "Request.hpp"
 #include "Location.hpp"
 //TODO: Agregar constantes a una clase
-const std::string CONTENT_LENGTH = "Content-Length";
+const std::string CONTENT_LENGTH = "content-length";
 const std::string PROTOCOL = "HTTP/1.1";
 
 /**
@@ -42,18 +42,19 @@ void Request::parse_headers(const std::string& headers_section) {
 	std::istringstream stream(headers_section);
 	std::string line;
 	
-	Logger::log(Logger::DEBUG, "Request.cpp", "Request Header:");
+	Logger::log(Logger::DEBUG, "Request.cpp", "Parsing request Header:");
 	while (std::getline(stream, line) && line != "\r") {
 		size_t colon_pos = line.find(": ");
 		if (colon_pos != std::string::npos) {
 			std::string key = line.substr(0, colon_pos);
+			toLower(key);
 			std::string value = strtrim(line.substr(colon_pos + 2));
 			_headers[key] = value;
-			Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
+			//Logger::log(Logger::DEBUG, "Request.cpp", "Key:" + key + ", Value:" + value);
 		}
 	}
-	
-	if (_headers.find("Host") == _headers.end()) {
+
+	if (_headers.find("host") == _headers.end()) {
 		throw HttpException::BadRequestException("Missing Host header."); 
 	}
 }
@@ -83,19 +84,19 @@ void Request::receiving_headers()
 		}
 		return ;
 	}
-	_state = RECEIVING_BODY;
 	std::string start_line = _raw_req.substr(0, _raw_req.find("\r\n"));
 	std::string headers_section = _raw_req.substr(_raw_req.find("\r\n") + 2, header_end - _raw_req.find("\r\n") - 2);
 	parse_start_line(start_line);
 	parse_headers(headers_section);
+	
+	_state = RECEIVING_BODY;
 	Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: RECEIVING_BODY");
+	std::cout << _raw_req << std::endl;
 	receiving_body(_raw_req.substr(header_end + 4));
 }
 
 void Request::receiving_body(std::string body_section) {
 	_body += body_section;
-
-	
 	if (_method == "GET" || _method == "HEAD")
 	{
 		if (!_body.empty())
@@ -104,18 +105,20 @@ void Request::receiving_body(std::string body_section) {
 		return ;
 	}
 	
-	if (!_body.empty() && is_chunked_request() && _state < DONE) {	
+	if (!_body.empty() && is_chunked_request() && _state < DONE) {
+		std::cout << "Chunked..."<< std::endl;
 		read_chunked_body();
-	} else if ( _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
+	} else if (!_body.empty() && _headers.find(CONTENT_LENGTH) != _headers.end() && _state < DONE) {
+		std::cout << "Body..."<< std::endl;
 		size_t content_length = (size_t) to_dec_ulong(_headers[CONTENT_LENGTH]);
 		parse_body(_body, content_length);
 		Logger::log(Logger::DEBUG, "Request.cpp", "Change State to: DONE REQ");
-	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "POST" ){ // Handles error on POST and DELETE
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "POST" ) { // Handles error on POST and DELETE
 		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");
-	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "DELETE"){
+	} else if (_body.empty() && _headers.find(CONTENT_LENGTH) == _headers.end() && _method == "DELETE") {
 		_state = DONE;
 		return;
-	} else if (_body.empty()){
+	} else if (_body.empty()) {
 		return ;
 	} else {
 		throw HttpException::BadRequestException("No Content-Length or Transfer-Encoding header present.");

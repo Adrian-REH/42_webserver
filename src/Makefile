@@ -20,7 +20,7 @@ SRCS = main.cpp Server.cpp ServerConfig.cpp HttpServerManager.cpp Location.cpp \
 		utils/endsWith.cpp utils/extractStrBetween.cpp utils/randomID.cpp \
 		utils/readFd.cpp utils/readFileName.cpp utils/split.cpp utils/startsWith.cpp \
 		utils/getAllDirs.cpp utils/strtrim.cpp utils/toString.cpp utils/toInt.cpp \
-		utils/generateIndexHtml.cpp utils/closeFDs.cpp\
+		utils/generateIndexHtml.cpp utils/closeFDs.cpp utils/toLower.cpp\
 		ParserConfig.cpp Config.cpp HttpStatus.cpp \
 		SessionCookieManager.cpp CGIManager.cpp ServerManager.cpp
 OBJS = ${SRCS:.cpp=.o}

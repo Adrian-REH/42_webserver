@@ -21,6 +21,7 @@ std::string					extractStrEnd(const std::string& line, const std::string& init);
 std::string					extractStrStart(const std::string& line, const std::string& end);
 std::string					extractStrREnd(const std::string& line, const std::string& end);
 int							randomInRange(int min, int max);
+void						toLower(std::string& str);
 std::string					generateSessionID(int length);
 std::string					readFd(int fd);
 std::deque<std::string>		readFileName(const char *_filename);
