@@ -71,6 +71,7 @@ void HttpServerManager::stop() {
 	}
 	srv_m.clear_clis(_epoll_fd);
 	srv_m.clear_srvs(_epoll_fd);
+	//srv_m.clear_cgis(_epoll_fd);
 	close(_epoll_fd);
 }
 
@@ -117,13 +118,13 @@ void HttpServerManager::handle_epoll()
 					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 					continue ;
 				}
+				if (code_res)
+					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 				if (set_event_action(events[i].data.fd, EPOLLIN) < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error set event action EPOLLIN to client with FD: " + to_string(events[i].data.fd));
 					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 					continue;
 				}
-				if (code_res)
-					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 			}
 			else if (srv_type.first == 1 && (events[i].events & EPOLLIN))
 			{
@@ -144,7 +145,8 @@ void HttpServerManager::handle_epoll()
 					srv_m.delete_client(events[i].data.fd, _epoll_fd);
 				}
 			}
-			else if (srv_type.first == 2){
+			else if (srv_type.first == 2) {
+				std::cout << "Event Handled: CGI" << std::endl;
 				int code_res = srv_type.second->handle_output_cgi(events[i].data.fd);
 				if (code_res < 0) {
 					Logger::log(Logger::WARN,"HttpServerManager.cpp", "Error handling cgi resolve client with: " + to_string(events[i].data.fd));

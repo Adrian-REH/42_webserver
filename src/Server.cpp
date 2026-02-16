@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include "ServerManager.hpp"
 #include <sys/socket.h>
 #include <sys/signal.h>
 #include <arpa/inet.h>
@@ -65,7 +66,7 @@ std::string Server::get_server_name() const {
 void Server::deleteClient(const int client_fd) {
 	Logger::log(Logger::DEBUG, "Server.cpp", "Deleting client_fd: "+ to_string(client_fd));
 
-	std::map<int, Client *>::iterator it=  _clients.find(client_fd);
+	std::map<int, Client *>::iterator it = _clients.find(client_fd);
 	if (it != _clients.end()) {
 		delete it->second;
 		_clients.erase(it);
@@ -204,7 +205,7 @@ int Server::handle_output_client(int client_fd) {
 
 
 int Server::handle_output_cgi(int cgi_fd) {
-	Client* client = ClientManager::getInstance().get_cli_by_pfd(cgi_fd);
+	Client* client = get_cli_by_pfd(cgi_fd);
 	Logger::log(Logger::INFO,"Server.cpp", "Executing read and send request for cgi_fd: " + to_string(cgi_fd));
 	try {
 		Config& conf = Config::getInstance();
@@ -236,7 +237,7 @@ int Server::handle_output_cgi(int cgi_fd) {
 
 
 Client *Server::get_cli_by_pfd(int pfd) {
-	std::map<int, Client *>::iterator it = _clients.find(pfd);
+	std::map<int, Client *>::iterator it;
 	for (it = _clients.begin(); it != _clients.end(); it++){
 		if (it->second->get_cgi_by_pfd(pfd))
 			return it->second;

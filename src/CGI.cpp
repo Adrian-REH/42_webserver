@@ -65,17 +65,17 @@ int CGI::resolve_cgi_env(Request req, std::string http_cookie) {
 	env_strings.push_back("REDIRECT_STATUS=200" );
 	env_strings.push_back("REQUEST_METHOD=" + req.get_method());
 	env_strings.push_back("QUERY_STRING=" + req.get_query_string());
-	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("Content-Length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
+	env_strings.push_back("CONTENT_LENGTH=" + req.get_header_by_key("content-length")); // Como lee Webserver por chunked el body entonces no hare que CGI se encarge de leerlo.
 	env_strings.push_back("SCRIPT_NAME=" + _script_path);
-	env_strings.push_back("CONTENT_TYPE=" + req.get_header_by_key("Content-Type"));
-	env_strings.push_back("SERVER_NAME=" + req.get_header_by_key("Host"));
-	env_strings.push_back("REMOTE_ADDR=" + req.get_header_by_key("X-Forwarded-For"));
-	env_strings.push_back("SERVER_PORT=" + req.get_header_by_key("X-Forwarded-Port"));
+	env_strings.push_back("CONTENT_TYPE=" + req.get_header_by_key("content-type"));
+	env_strings.push_back("SERVER_NAME=" + req.get_header_by_key("host"));
+	env_strings.push_back("REMOTE_ADDR=" + req.get_header_by_key("x-forwarded-for"));
+	env_strings.push_back("SERVER_PORT=" + req.get_header_by_key("x-forwarded-port"));
 	env_strings.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	env_strings.push_back("HTTP_USER_AGENT=" + req.get_header_by_key("User-Agent"));
-	env_strings.push_back("HTTP_REFERER=" + req.get_header_by_key("Referer"));
-	env_strings.push_back("HTTP_ACCEPT_ENCODING=" + req.get_header_by_key("Accept-Encoding"));
-
+	env_strings.push_back("HTTP_USER_AGENT=" + req.get_header_by_key("user-agent"));
+	env_strings.push_back("HTTP_REFERER=" + req.get_header_by_key("referer"));
+	env_strings.push_back("HTTP_ACCEPT_ENCODING=" + req.get_header_by_key("accept-encoding"));
+	std::cout << "Body: " << req.get_body() << std::endl;
 	_env = new char*[env_strings.size() + 1];
 	for (size_t i = 0; i < env_strings.size(); ++i) {
 		_env[i] = new char[env_strings[i].size() + 1];
@@ -188,11 +188,13 @@ std::string CGI::resolve_response() {
 		result.append(buffer, bytes_read);
 		std::time_t currentTime = std::time(0);
 		if (difftime(currentTime, expired) > 0) {
+			cgi_kill();
 			close(_cgi_fd);
 			throw HttpException::RequestTimeoutException();
 		}
 	}
 	close(_cgi_fd);
+	cgi_kill();
 	int ret = 0;
 	if (WIFEXITED(_status)){
 		ret = WEXITSTATUS(_status);

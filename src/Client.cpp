@@ -165,7 +165,7 @@ Cookie Client::handle_cookie() {
 				session_id = extractStrREnd(cookie_val, "session_id=");
 			Logger::log(Logger::DEBUG, "Client.cpp", "Found Session Cookie: " + session_id + " Validating...");
 			cookie = sessionCM.getCookieBySessionId(session_id);
-			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie:display Name: " + cookie.get_name() + ", value: "+ cookie.get_value()+ ", expiration: " + to_string(cookie.get_expiration()));
+			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie: display Name: " + cookie.get_name() + ", value: "+ cookie.get_value()+ ", expiration: " + to_string(cookie.get_expiration()));
 		}
 	}
 	return cookie;
@@ -175,12 +175,13 @@ std::string Client::prepare_cgi_data(const ServerConfig& srv_conf, Cookie cookie
 	_request.set_header("X-Forwarded-For", _ip);
 	_request.set_header("X-Forwarded-Port", to_string(srv_conf.get_port()));
 
-	std::string http_cookie;
+	std::string http_cookie = "";
 	if (!cookie.isEmpty()) {
 		std::string session_status = SessionCookieManager::getInstance().isCookieExpired(cookie) ? "expired" : "valid";
 		http_cookie = "HTTP_COOKIE=session=" + session_status + "; session_id=" + cookie.get_value();
 	} else
-		http_cookie = "HTTP_COOKIE=session_id=" + generateSessionID(16);
+		http_cookie = "HTTP_COOKIE=session_id=" + generateSessionID(16) + "; session=invalid";
+	Logger::log(Logger::DEBUG, "Client.cpp", "prepare_cgi_data: HTTP_COOKIE" + http_cookie);
 	return http_cookie;
 }
 
@@ -195,7 +196,7 @@ void Client::update_cookie_from_response(const std::string& response, Cookie& co
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie deleted value:" + cookie.get_value());
 			return ;
 		}
-		if (cookie.isEmpty() && pos_session_id != std::string::npos && response.find(";", pos_session_id) != std::string::npos) {
+		if (cookie.isEmpty() && response.find(";", pos_session_id) != std::string::npos && pos_session != std::string::npos) {
 			std::string session_id = extractStrBetween(response, "Set-Cookie: session_id=", ";");
 			Logger::log(Logger::DEBUG, "Client.cpp", "Cookie session_id Saving... value:" + session_id);
 			cookie = sessionCM.setCookieBySessionId(session_id, 300);
@@ -293,16 +294,15 @@ int Client::handle_response(ServerConfig  srv_conf) {
 					script_path.erase(0, 1);
 				if (root_dir[0] == '/')
 					root_dir.erase(0, 1);
-
 				CGI *cgi = new CGI(root_dir, script_path, _request, cookie); // TODO NECESITA EL EPOLL FD
 				cgi->resolve_cgi_env(_request, http_cookie);
 				cgi->execute();
 				ServerManager& srv_m = ServerManager::getInstance();
-				ClientManager& cli_m = ClientManager::getInstance();
+				//ClientManager& cli_m = ClientManager::getInstance();
 				Server* srv = ServerManager::getInstance().get_srv_by_cli(_socket_fd);
 				if (srv) {
 					_cgis[cgi->get_pfd()] = cgi;
-					cli_m.save_cli_by_pfd(std::make_pair(cgi->get_pfd(), this));
+					//cli_m.save_cli_by_pfd(std::make_pair(cgi->get_pfd(), this));
 					srv_m.save_server_type(cgi->get_pfd(), 2, srv);
 				}
 				struct epoll_event ev;
@@ -312,7 +312,6 @@ int Client::handle_response(ServerConfig  srv_conf) {
 			}
 			return 0;
 		}
-		
 		throw HttpException::NotFoundException();
 	}
 	catch(HttpException::NotAllowedMethodException &e) {
@@ -414,12 +413,13 @@ int Client::resolve_cgi(int cgi_fd, ServerConfig  srv_conf) {
 				body_start +=4;
 				std::string body = rs.substr(body_start);
 				rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
-			}else {
+			} else {
 				std::cout <<"RS: " << rs<< std::endl;
 				rs_start_line.append("Content-Length: " + to_string(rs.size()) + "\r\n");
 			}
 		}
 		rs_start_line.append(rs);
+		clear_cgi_by_fd(cgi_fd, ServerManager::getInstance().get_epoll_fd());
 		send_response(rs_start_line);
 		return 0;
 	}
@@ -457,8 +457,9 @@ int Client::resolve_cgi(int cgi_fd, ServerConfig  srv_conf) {
 		rs_start_line.append("Content-Length: " + to_string(body.size()) + "\r\n");
 	}
 	rs_start_line.append(rs);
+	clear_cgi_by_fd(cgi_fd, ServerManager::getInstance().get_epoll_fd());
 	send_response(rs_start_line);
-	return -1;
+	return 0;
 }
 
 void Client::send_response(std::string &response) {
@@ -534,12 +535,12 @@ void Client::clear_cgis(int epoll_fd) {
 
 void Client::clear_cgi_by_fd(int pfd, int epoll_fd) {
 	std::map<int, CGI *>::iterator it = _cgis.find(pfd);
-	Logger::log(Logger::DEBUG, "Client.cpp", "cleaning cgi_fd: "+ to_string(pfd));
 	if (it != _cgis.end()) {
+	Logger::log(Logger::DEBUG, "Client.cpp", "cleaning cgi_fd: "+ to_string(pfd));
+
 		it->second->cgi_kill();
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it->first, NULL);
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, it->second->get_pfd(), NULL);
 		close(it->first);
-		close(it->second->get_pfd());
 		delete it->second;
 		_cgis.erase(it);
 	}

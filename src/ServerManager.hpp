@@ -27,7 +27,8 @@ class ServerManager {
 		Server *get_srv_by_cli(int fd);
 		Server *get_srv_by_cgi(int fd);
 		Server *get_srv_by_sock(int fd);
-		
+		void clear_cgis(int epoll_fd);
+
 		std::pair<int, Server*> find_server_type(int socket_fd);
 		std::pair<int, Server*> save_server_type(int socket_fd, int type, Server * srv);
 		void clear_clis(int epoll_fd);
@@ -35,7 +36,7 @@ class ServerManager {
 		std::map<int, Server *>::iterator delete_client(int client_fd, int epoll_fd);
 
 		std::map<int, Server *>::iterator delete_server(int sock_fd, int epoll_fd);
-		std::map<int, Server *>::iterator delete_cli_by_cgi(int cgi_fd, int epoll_fd);
+		void delete_cli_by_cgi(int cgi_fd, int epoll_fd);
 
 		std::map<int, Server *>::iterator delete_cgi(int cgi_fd, int epoll_fd);
 

@@ -27,6 +27,7 @@ std::map<int, Server *> ServerManager::get_sock_srvs() {
 std::map<int, Server *> ServerManager::get_clis_srvs() {
 	return _cli_srvs;
 }
+
 std::map<int, Server *> ServerManager::get_cgis_srvs() {
 	return _cgi_srvs;
 }
@@ -97,6 +98,17 @@ void ServerManager::clear_srvs(int epoll_fd){
 	}
 	_sock_srvs.clear();
 }
+void ServerManager::clear_cgis(int epoll_fd){
+	std::map<int, Server *>::iterator it;
+
+	for (it = _cgi_srvs.begin();it != _cgi_srvs.end(); it++) {
+		this->delete_cgi(it->first, epoll_fd);
+		delete it->second;
+		it = _cgi_srvs.begin();
+	}
+	_cgi_srvs.clear();
+}
+
 std::map<int, Server *>::iterator ServerManager::delete_client(int client_fd, int epoll_fd){
 	std::map<int, Server *>::iterator tmp;
 	std::map<int, Server *>::iterator it = _cli_srvs.find(client_fd);
@@ -118,6 +130,7 @@ std::map<int, Server *>::iterator ServerManager::delete_client(int client_fd, in
 		_cli_srvs[client_fd]->deleteClient(client_fd);
 		_cli_srvs.erase(it);
 		it = _cli_srvs.begin();
+		
 	}
 	return it;
 }
@@ -131,21 +144,29 @@ std::map<int, Server *>::iterator ServerManager::delete_server(int sock_fd, int 
 	}
 	return it;
 }
-std::map<int, Server *>::iterator ServerManager::delete_cli_by_cgi(int cgi_fd, int epoll_fd){
-	ClientManager& cli_m = ClientManager::getInstance();
-	Client *cli = cli_m.get_cli_by_pfd(cgi_fd);
-	std::cout << "ServerManager::delete_cli_by_cgi" << std::endl;
-	return delete_client(cli->get_socket_fd(), epoll_fd);
+
+void ServerManager::delete_cli_by_cgi(int cgi_fd, int epoll_fd){
+	std::map<int, Server *>::iterator it = _cgi_srvs.find(cgi_fd);
+	if (it != _cgi_srvs.end()){
+		Client* cli = it->second->get_cli_by_pfd(cgi_fd);
+		if (cli) {
+			std::cout << "ServerManager::delete_cli_by_cgi" << std::endl;
+			delete_client(cli->get_socket_fd(), epoll_fd);	
+		}
+	}
+	return ;
 }
 
 std::map<int, Server *>::iterator ServerManager::delete_cgi(int cgi_fd, int epoll_fd){
 	std::map<int, Server *>::iterator it = _cgi_srvs.find(cgi_fd);
-	if (it != _cgi_srvs.end()){
+	if (it != _cgi_srvs.end()) {
+		Logger::log(Logger::DEBUG, "ServerManager.cpp", "Deleting cgi_fd: "+ to_string(cgi_fd));
 		Client* cli = it->second->get_cli_by_pfd(cgi_fd);
 		if (cli)
 			cli->clear_cgi_by_fd(cgi_fd, epoll_fd);
 		_cgi_srvs.erase(it);
 	}
+	
 	return it;
 }
 
